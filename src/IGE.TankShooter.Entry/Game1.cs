@@ -1,20 +1,16 @@
-﻿namespace IGE.TankShooter.Entry;
+namespace IGE.TankShooter.Entry;
 
+using System;
 using System.Collections.Generic;
+
+using Core;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
-using MonoGame.Extended;
-using MonoGame.Extended.SceneGraphs;
-using MonoGame.Extended.Sprites;
-using MonoGame.Extended.ViewportAdapters;
-
 using MonoGame.Extended.Input;
-using IGE.TankShooter.Entry.Graphics;
-using System;
-using IGE.TankShooter.Entry.GameObjects;
+using GameObjects;
 
 public class Game1 : Game
 {
@@ -22,6 +18,8 @@ public class Game1 : Game
   public SpriteBatch spriteBatch;
   private Tank tank;
   public ISet<Bullet> Bullets = new HashSet<Bullet>();
+  public ISet<Enemy> Enemies = new HashSet<Enemy>();
+  private CountdownTimer EnemySpawnTimer = new CountdownTimer(3, 3, 10);
 
   public OrthographicCamera Camera { get; set; }
 
@@ -60,15 +58,22 @@ public class Game1 : Game
       Exit();
 
     MaybeFireBullet();
+    MaybeSpawnEnemy(gameTime);
     TranslateCamera();
 
     this.tank.Update(gameTime);
-
+    
     foreach (var bullet in this.Bullets)
     {
       bullet.Update(gameTime);
     }
-
+    
+    foreach (var enemy in this.Enemies)
+    {
+      Console.WriteLine("Updating enemy: " + enemy);
+      enemy.Update(gameTime);
+    }
+    
     base.Update(gameTime);
   }
 
@@ -107,6 +112,15 @@ public class Game1 : Game
 
   }
 
+  private void MaybeSpawnEnemy(GameTime gameTime)
+  {
+    if (this.EnemySpawnTimer.Update(gameTime))
+    {
+      var height = new Random().Next(0, GraphicsDevice.Viewport.Height);
+      Enemies.Add(new Enemy(new Vector2(GraphicsDevice.Viewport.Width, height), this.tank));
+    }
+  }
+
   protected override void Draw(GameTime gameTime)
   {
     GraphicsDevice.Clear(Color.CornflowerBlue);
@@ -114,9 +128,15 @@ public class Game1 : Game
     this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix());
 
     this.tank.Draw(gameTime, spriteBatch);
+
     foreach (var bullet in this.Bullets)
     {
       bullet.Draw(gameTime, spriteBatch);
+    }
+
+    foreach (var enemy in this.Enemies)
+    {
+      enemy.Draw(gameTime, spriteBatch);
     }
 
     this.spriteBatch.End();

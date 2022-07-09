@@ -28,6 +28,8 @@ public class Tank : GameObject
     this.tankGame = tankGame;
   }
 
+  public Vector2 CurrentPosition() => BodyTransform.Position;
+
   public override void Initialize()
   {
     this.velocity = new MovementVelocity(Vector2.Zero, 10f);
