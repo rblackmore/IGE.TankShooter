@@ -12,6 +12,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.Input;
 using GameObjects;
 
+using MonoGame.Extended;
+using MonoGame.Extended.ViewportAdapters;
+
 public class Game1 : Game
 {
   private GraphicsDeviceManager graphics;
@@ -70,7 +73,6 @@ public class Game1 : Game
     
     foreach (var enemy in this.Enemies)
     {
-      Console.WriteLine("Updating enemy: " + enemy);
       enemy.Update(gameTime);
     }
     

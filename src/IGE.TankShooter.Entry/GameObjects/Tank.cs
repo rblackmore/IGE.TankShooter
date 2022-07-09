@@ -6,6 +6,7 @@ using IGE.TankShooter.Entry.Graphics;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Input;
@@ -20,6 +21,8 @@ public class Tank : GameObject
   private Transform2 TurretTransform;
 
   private Game1 tankGame;
+  
+  private const float MAX_TURRET_ROTATION_SPEED = 6f; // degrees per seconds
 
   private MovementVelocity velocity;
 
@@ -66,6 +69,43 @@ public class Tank : GameObject
   public override void Update(GameTime gameTime)
   {
     this.MoveTank(gameTime);
+    RotateTurretTo(new Vector2(Mouse.GetState().X, Mouse.GetState().Y), gameTime);
+  }
+  
+  private void RotateTurretTo(Vector2 target, GameTime gameTime)
+  {
+    var currentAngle = this.TurretTransform.Rotation * 180 / (float)Math.PI;
+    while (currentAngle < 0)
+    {
+      currentAngle += 360;
+    }
+    while (currentAngle > 360)
+    {
+      currentAngle -= 360;
+    }
+    
+    var targetAngle = (target - CurrentPosition()).ToAngle() * 180 / (float)Math.PI;
+    while (targetAngle < 0)
+    {
+      targetAngle += 360;
+    }
+    while (targetAngle > 360)
+    {
+      targetAngle -= 360;
+    }
+
+    float toRotate = targetAngle - currentAngle;
+    if (toRotate > 180)
+    {
+      toRotate = -(360 - toRotate);
+    }
+
+    if (toRotate < -180)
+    {
+      toRotate = 360 + toRotate;
+    }
+    
+    this.TurretTransform.Rotation = (currentAngle + toRotate * MAX_TURRET_ROTATION_SPEED * gameTime.GetElapsedSeconds()) * ((float)Math.PI / 180);
   }
 
   private void MoveTank(GameTime gameTime)
