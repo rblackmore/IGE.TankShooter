@@ -69,7 +69,7 @@ public class Tank : GameObject
   public override void Update(GameTime gameTime)
   {
     this.MoveTank(gameTime);
-    RotateTurretTo(new Vector2(Mouse.GetState().X, Mouse.GetState().Y), gameTime);
+    RotateTurretTo(tankGame.Camera.ScreenToWorld(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)), gameTime);
   }
   
   private void RotateTurretTo(Vector2 target, GameTime gameTime)

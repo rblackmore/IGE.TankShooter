@@ -83,8 +83,9 @@ public class Game1 : Game
   {
     if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
     {
-      var target = Mouse.GetState().Position;
-      Bullets.Add(new Bullet(this, new Vector2(target.X, target.Y), this.tank.CurrentPosition()));
+      var targetScreen = Mouse.GetState().Position;
+      var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
+      Bullets.Add(new Bullet(this, target, this.tank.CurrentPosition()));
     }
   }
 
