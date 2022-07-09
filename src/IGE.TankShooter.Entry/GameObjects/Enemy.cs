@@ -13,8 +13,8 @@ public class Enemy : GameObject
   private Vector2 Position;
   private Tank Target;
   
-  private const float SPEED = 100f;
-  private const float SIZE = 100f;
+  private const float SPEED = 10f;
+  private const float SIZE = 2f;
   
   public Enemy(Vector2 initialPosition, Tank target)
   {
@@ -30,7 +30,7 @@ public class Enemy : GameObject
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
-    spriteBatch.DrawCircle(Position, SIZE, 20, Color.White);
+    spriteBatch.DrawCircle(Position, SIZE, 10, Color.White);
   }
   
 }
