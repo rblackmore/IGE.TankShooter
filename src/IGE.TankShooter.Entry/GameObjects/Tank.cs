@@ -41,22 +41,20 @@ public class Tank : GameObject
 
   public override void LoadContent()
   {
-    // TODO: Load better textures.
-    var bodyTexture =
-      GraphicsHelpers.CreateColouredRectangle(tankGame.GraphicsDevice, 6, 3, Color.DarkBlue);
-
-    BodySprite = new Sprite(bodyTexture);
-
-    var turretTexture =
-      GraphicsHelpers.CreateColouredRectangle(tankGame.GraphicsDevice, 6, 1, Color.DarkRed);
-
-    TurretSprite = new Sprite(turretTexture);
-
-    this.TurretTransform = new Transform2(new Vector2(10,9), 0.0f, Vector2.One);
-    this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, Vector2.One);
-
+    var bodyTexture = tankGame.Content.Load<Texture2D>("tankBody_red_outline");
+    var turretTexture = tankGame.Content.Load<Texture2D>("tankRed_barrel1_outline");
+    
+    // Calculate scale based on a desired width of 3m.
+    // That same scale factor will be used for the height too but we don't specify a desired height, rather just take
+    // the height of the texture and scale it using the same ratio we used to get to 3m width.
+    var spriteScale = 3f / bodyTexture.Width;
+    
+    this.BodySprite = new Sprite(bodyTexture);
+    this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
     this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
 
+    this.TurretSprite = new Sprite(turretTexture);
+    this.TurretTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
     this.TurretTransform.Parent = this.BodyTransform;
 
   }

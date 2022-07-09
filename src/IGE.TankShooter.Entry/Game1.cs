@@ -119,7 +119,7 @@ public class Game1 : Game
     if (this.EnemySpawnTimer.Update(gameTime))
     {
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
-      var distanceFromTank = new Random().NextSingle(50f, 75f));
+      var distanceFromTank = new Random().NextSingle(50f, 75f);
       var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
       Enemies.Add(new Enemy(spawnPosition, this.tank));
     }
