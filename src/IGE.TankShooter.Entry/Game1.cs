@@ -23,6 +23,7 @@ public class Game1 : Game
   public ISet<Bullet> Bullets = new HashSet<Bullet>();
   public ISet<Enemy> Enemies = new HashSet<Enemy>();
   private CountdownTimer EnemySpawnTimer = new CountdownTimer(3, 3, 10);
+  private Texture2D BulletTexture;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -53,6 +54,7 @@ public class Game1 : Game
   {
     spriteBatch = new SpriteBatch(GraphicsDevice);
     this.tank.LoadContent();
+    this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
   }
 
   protected override void Update(GameTime gameTime)
@@ -85,7 +87,7 @@ public class Game1 : Game
     {
       var targetScreen = Mouse.GetState().Position;
       var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      Bullets.Add(new Bullet(this, target, this.tank.CurrentPosition()));
+      Bullets.Add(new Bullet(this, BulletTexture, target, this.tank.CurrentPosition()));
     }
   }
 
