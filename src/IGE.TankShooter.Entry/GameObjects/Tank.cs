@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
+using MonoGame.Extended.Input;
 using MonoGame.Extended.Sprites;
 
 public class Tank : GameObject
@@ -20,6 +21,9 @@ public class Tank : GameObject
 
   private Game1 tankGame;
 
+  private Vector2 direction = Vector2.Zero;
+  private float velocity = 1f;
+
   public Tank(Game1 tankGame)
   {
     this.tankGame = tankGame;
@@ -27,8 +31,9 @@ public class Tank : GameObject
 
   public override void Initialize()
   {
-    // Initilize the things.
+    base.Initialize();
   }
+
   public override void LoadContent()
   {
     // TODO: Load better textures.
@@ -42,20 +47,32 @@ public class Tank : GameObject
 
     TurretSprite = new Sprite(turretTexture);
 
-    this.BodyTransform = new Transform2(new Vector2(50), 0.0f, new Vector2(30));
-    this.TurretTransform = new Transform2(new Vector2(50), 0.0f, new Vector2(30));
+    this.BodyTransform = new Transform2(new Vector2(10, 20), 0.0f, Vector2.One);
+    this.TurretTransform = new Transform2(new Vector2(10, 20), 0.0f, Vector2.One);
 
-    this.TurretTransform.Parent = this.BodyTransform;
+    //this.TurretTransform.Parent = this.BodyTransform;
 
   }
-  public override void UnloadContent()
-  {
-    // Unload Things.
-  }
-   
+
   public override void Update(GameTime gameTime)
   {
+    //var deltaTime = gameTime.GetElapsedSeconds();
 
+    //var kbState = KeyboardExtended.GetState();
+
+    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Left))
+    //  this.direction.X -= 1;
+    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Right))
+    //  this.direction.X += 1;
+    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Up))
+    //  this.direction.Y -= 1;
+    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Down))
+    //  this.direction.Y += 1;
+
+    //var scaler = this.direction.NormalizedCopy();
+    //this.BodyTransform.Position += scaler * deltaTime;
+
+    //this.BodyTransform.Position += new Vector2(10);
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
