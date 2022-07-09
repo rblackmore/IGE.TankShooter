@@ -1,13 +1,19 @@
 ﻿namespace IGE.TankShooter.Entry;
 
+using System.Collections.Generic;
+
+using GameComponents;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using MonoGame.Extended.Input;
+
 public class Game1 : Game
 {
   private GraphicsDeviceManager _graphics;
-  private SpriteBatch _spriteBatch;
+  public SpriteBatch _spriteBatch;
 
   public Game1()
   {
@@ -26,17 +32,20 @@ public class Game1 : Game
   protected override void LoadContent()
   {
     _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-    // TODO: use this.Content to load your game content here
   }
-
+  
   protected override void Update(GameTime gameTime)
   {
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
-    // TODO: Add your update logic here
-
+    if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
+    {
+      var target = Mouse.GetState().Position;
+      var initial = GraphicsDevice.Viewport.Bounds.Center;
+      Components.Add(new Bullet(this, new Vector2(target.X, target.Y), new Vector2(initial.X, initial.Y)));
+    }
+    
     base.Update(gameTime);
   }
 
