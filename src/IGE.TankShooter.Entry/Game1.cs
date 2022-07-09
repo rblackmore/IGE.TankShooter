@@ -35,14 +35,13 @@ public class Game1 : Game
   protected override void Initialize()
   {
     this.tank = new Tank(this);
+    this.tank.Initialize();
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
 
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
-
-    //this.Camera.Position = new Vector2(-30);
 
     this.Services.AddService(this.Camera);
 

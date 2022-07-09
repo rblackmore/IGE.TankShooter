@@ -21,8 +21,7 @@ public class Tank : GameObject
 
   private Game1 tankGame;
 
-  private Vector2 direction = Vector2.Zero;
-  private float velocity = 1f;
+  private MovementVelocity velocity;
 
   public Tank(Game1 tankGame)
   {
@@ -31,6 +30,7 @@ public class Tank : GameObject
 
   public override void Initialize()
   {
+    this.velocity = new MovementVelocity(Vector2.Zero, 10f);
     base.Initialize();
   }
 
@@ -47,32 +47,47 @@ public class Tank : GameObject
 
     TurretSprite = new Sprite(turretTexture);
 
-    this.BodyTransform = new Transform2(new Vector2(10, 20), 0.0f, Vector2.One);
-    this.TurretTransform = new Transform2(new Vector2(10, 20), 0.0f, Vector2.One);
+    this.TurretTransform = new Transform2(new Vector2(10,9), 0.0f, Vector2.One);
+    this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, Vector2.One);
 
-    //this.TurretTransform.Parent = this.BodyTransform;
+    this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
 
+    this.TurretTransform.Parent = this.BodyTransform;
+
+  }
+
+  private void BodyTransform_TranformUpdated()
+  {
+    this.TurretTransform.Position = this.BodyTransform.Position -= Vector2.UnitY * 10;
   }
 
   public override void Update(GameTime gameTime)
   {
-    //var deltaTime = gameTime.GetElapsedSeconds();
+    this.MoveTank(gameTime);
+  }
 
-    //var kbState = KeyboardExtended.GetState();
+  private void MoveTank(GameTime gameTime)
+  {
+    var deltaTime = gameTime.GetElapsedSeconds();
 
-    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Left))
-    //  this.direction.X -= 1;
-    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Right))
-    //  this.direction.X += 1;
-    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Up))
-    //  this.direction.Y -= 1;
-    //if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Down))
-    //  this.direction.Y += 1;
+    var kbState = KeyboardExtended.GetState();
 
-    //var scaler = this.direction.NormalizedCopy();
-    //this.BodyTransform.Position += scaler * deltaTime;
+    var direction = Vector2.Zero;
 
-    //this.BodyTransform.Position += new Vector2(10);
+    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.A))
+      direction -= Vector2.UnitX;
+    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.D))
+      direction += Vector2.UnitX;
+    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.W))
+      direction -= Vector2.UnitY;
+    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.S))
+      direction += Vector2.UnitY;
+
+    this.velocity.Direction = direction;
+
+    var scaler = this.velocity.GetScaler();
+    this.BodyTransform.Position += scaler * deltaTime;
+    this.TurretTransform.Position += scaler * deltaTime;
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
