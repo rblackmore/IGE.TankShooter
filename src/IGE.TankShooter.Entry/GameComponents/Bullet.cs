@@ -25,9 +25,9 @@ public class Bullet : DrawableGameComponent
   public override void Draw(GameTime gameTime)
   {
     base.Draw(gameTime);
-    this.tankGame._spriteBatch.Begin();
-    this.tankGame._spriteBatch.FillRectangle(new RectangleF(Position.X, Position.Y, 10f, 10f), Color.White);
-    this.tankGame._spriteBatch.End();
+    this.tankGame.spriteBatch.Begin();
+    this.tankGame.spriteBatch.FillRectangle(new RectangleF(Position.X, Position.Y, 10f, 10f), Color.White);
+    this.tankGame.spriteBatch.End();
   }
 
   public override void Update(GameTime gameTime)

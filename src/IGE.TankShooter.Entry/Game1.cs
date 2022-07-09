@@ -8,30 +8,40 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using MonoGame.Extended;
+using MonoGame.Extended.SceneGraphs;
+using MonoGame.Extended.Sprites;
+using MonoGame.Extended.ViewportAdapters;
+
 using MonoGame.Extended.Input;
+using IGE.TankShooter.Entry.Graphics;
+using System;
+using IGE.TankShooter.Entry.GameObjects;
 
 public class Game1 : Game
 {
-  private GraphicsDeviceManager _graphics;
-  public SpriteBatch _spriteBatch;
+  private GraphicsDeviceManager graphics;
+  public SpriteBatch spriteBatch;
+
+  private Tank tank;
 
   public Game1()
   {
-    _graphics = new GraphicsDeviceManager(this);
+    graphics = new GraphicsDeviceManager(this);
     Content.RootDirectory = "Content";
     IsMouseVisible = true;
   }
 
   protected override void Initialize()
   {
-    // TODO: Add your initialization logic here
-
+    this.tank = new Tank(this);
     base.Initialize();
   }
 
   protected override void LoadContent()
   {
-    _spriteBatch = new SpriteBatch(GraphicsDevice);
+    spriteBatch = new SpriteBatch(GraphicsDevice);
+    this.tank.LoadContent();
   }
   
   protected override void Update(GameTime gameTime)
@@ -53,7 +63,11 @@ public class Game1 : Game
   {
     GraphicsDevice.Clear(Color.CornflowerBlue);
 
-    // TODO: Add your drawing code here
+    this.spriteBatch.Begin();
+
+    this.tank.Draw(gameTime, spriteBatch);
+
+    this.spriteBatch.End();
 
     base.Draw(gameTime);
   }
