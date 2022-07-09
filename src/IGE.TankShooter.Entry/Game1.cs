@@ -82,8 +82,7 @@ public class Game1 : Game
     if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
     {
       var target = Mouse.GetState().Position;
-      var initial = GraphicsDevice.Viewport.Bounds.Center;
-      Bullets.Add(new Bullet(this, new Vector2(target.X, target.Y), new Vector2(initial.X, initial.Y)));
+      Bullets.Add(new Bullet(this, new Vector2(target.X, target.Y), this.tank.CurrentPosition()));
     }
   }
 
@@ -123,7 +122,7 @@ public class Game1 : Game
 
   protected override void Draw(GameTime gameTime)
   {
-    GraphicsDevice.Clear(Color.CornflowerBlue);
+    GraphicsDevice.Clear(Color.Black);
 
     this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix());
 
