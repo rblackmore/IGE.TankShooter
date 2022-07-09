@@ -2,8 +2,6 @@
 
 using System.Collections.Generic;
 
-using GameComponents;
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -22,8 +20,8 @@ public class Game1 : Game
 {
   private GraphicsDeviceManager graphics;
   public SpriteBatch spriteBatch;
-
   private Tank tank;
+  public ISet<Bullet> Bullets = new HashSet<Bullet>();
 
   public Game1()
   {
@@ -49,14 +47,24 @@ public class Game1 : Game
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
+    MaybeFireBullet();
+    
+    foreach (var bullet in this.Bullets)
+    {
+      bullet.Update(gameTime);
+    }
+    
+    base.Update(gameTime);
+  }
+  
+  private void MaybeFireBullet()
+  {
     if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
     {
       var target = Mouse.GetState().Position;
       var initial = GraphicsDevice.Viewport.Bounds.Center;
-      Components.Add(new Bullet(this, new Vector2(target.X, target.Y), new Vector2(initial.X, initial.Y)));
+      Bullets.Add(new Bullet(this, new Vector2(target.X, target.Y), new Vector2(initial.X, initial.Y)));
     }
-    
-    base.Update(gameTime);
   }
 
   protected override void Draw(GameTime gameTime)
@@ -66,6 +74,10 @@ public class Game1 : Game
     this.spriteBatch.Begin();
 
     this.tank.Draw(gameTime, spriteBatch);
+    foreach (var bullet in this.Bullets)
+    {
+      bullet.Draw(gameTime, spriteBatch);
+    }
 
     this.spriteBatch.End();
 
