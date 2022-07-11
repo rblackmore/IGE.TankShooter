@@ -12,6 +12,8 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.Input;
 using GameObjects;
 
+using Graphics;
+
 using MonoGame.Extended;
 using MonoGame.Extended.ViewportAdapters;
 
@@ -24,6 +26,7 @@ public class Game1 : Game
   public ISet<Enemy> Enemies = new HashSet<Enemy>();
   private CountdownTimer EnemySpawnTimer = new CountdownTimer(3, 3, 10);
   private Texture2D BulletTexture;
+  private BackgroundMap Background;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -38,6 +41,8 @@ public class Game1 : Game
   {
     this.tank = new Tank(this);
     this.tank.Initialize();
+    
+    Background = new BackgroundMap(200, 200);
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
 
@@ -55,6 +60,7 @@ public class Game1 : Game
     spriteBatch = new SpriteBatch(GraphicsDevice);
     this.tank.LoadContent();
     this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
+    Background.LoadContent(Content, GraphicsDevice);
   }
 
   protected override void Update(GameTime gameTime)
@@ -110,9 +116,9 @@ public class Game1 : Game
     this.Camera.Move(direction);
 
     if (kbState.WasKeyJustDown(Keys.O))
-      this.Camera.Zoom -= 1;
+      this.Camera.Zoom -= 0.1f;
     if (kbState.WasKeyJustDown(Keys.L))
-      this.Camera.Zoom += 1;
+      this.Camera.Zoom += 0.1f;
 
   }
 
@@ -132,6 +138,8 @@ public class Game1 : Game
     GraphicsDevice.Clear(Color.Black);
 
     this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix());
+    
+    this.Background.Draw(Camera);
 
     this.tank.Draw(gameTime, spriteBatch);
 
