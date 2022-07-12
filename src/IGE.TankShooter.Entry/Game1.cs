@@ -177,7 +177,10 @@ public class Game1 : Game
   {
     GraphicsDevice.Clear(Color.Black);
 
-    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix());
+    // See https://community.monogame.net/t/screen-tearing-with-monogame-extended-and-tiled/14757 for details of what
+    // SamplerState.PointClamp does. It is to stop weird lines due to floating point weirdness between background tile
+    // rows when zooming.
+    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
     
     this.Background.Draw(Camera);
 
