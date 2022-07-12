@@ -21,8 +21,9 @@ public class Tank : GameObject
   private Transform2 TurretTransform;
 
   private Game1 tankGame;
-  
+
   private const float MAX_TURRET_ROTATION_SPEED = 6f; // degrees per seconds
+  private const float ACCELERATION = 5.0f; // Units per second.
 
   private MovementVelocity velocity;
 
@@ -35,7 +36,10 @@ public class Tank : GameObject
 
   public override void Initialize()
   {
-    this.velocity = new MovementVelocity(Vector2.Zero, 10f);
+    this.velocity = new MovementVelocity(0f, 0f);
+    this.velocity.MaxVelocity = 10.0f;
+    this.velocity.MinVelocity = -10.0f;
+    this.velocity.Acceleration = ACCELERATION;
     base.Initialize();
   }
 
@@ -43,12 +47,12 @@ public class Tank : GameObject
   {
     var bodyTexture = tankGame.Content.Load<Texture2D>("tankBody_red_outline");
     var turretTexture = tankGame.Content.Load<Texture2D>("tankRed_barrel1_outline");
-    
+
     // Calculate scale based on a desired width of 3m.
     // That same scale factor will be used for the height too but we don't specify a desired height, rather just take
     // the height of the texture and scale it using the same ratio we used to get to 3m width.
     var spriteScale = 3f / bodyTexture.Width;
-    
+
     this.BodySprite = new Sprite(bodyTexture);
     this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
     this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
@@ -69,7 +73,7 @@ public class Tank : GameObject
     this.MoveTank(gameTime);
     RotateTurretTo(tankGame.Camera.ScreenToWorld(new Vector2(Mouse.GetState().X, Mouse.GetState().Y)), gameTime);
   }
-  
+
   private void RotateTurretTo(Vector2 target, GameTime gameTime)
   {
     var currentAngle = this.TurretTransform.Rotation * 180 / (float)Math.PI;
@@ -81,7 +85,7 @@ public class Tank : GameObject
     {
       currentAngle -= 360;
     }
-    
+
     var targetAngle = (target - CurrentPosition()).ToAngle() * 180 / (float)Math.PI;
     while (targetAngle < 0)
     {
@@ -102,7 +106,7 @@ public class Tank : GameObject
     {
       toRotate = 360 + toRotate;
     }
-    
+
     this.TurretTransform.Rotation = (currentAngle + toRotate * MAX_TURRET_ROTATION_SPEED * gameTime.GetElapsedSeconds()) * ((float)Math.PI / 180);
   }
 
@@ -112,22 +116,32 @@ public class Tank : GameObject
 
     var kbState = KeyboardExtended.GetState();
 
-    var direction = Vector2.Zero;
+    var targetDirection = Vector2.Zero;
 
-    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.A))
-      direction -= Vector2.UnitX;
-    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.D))
-      direction += Vector2.UnitX;
-    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.W))
-      direction -= Vector2.UnitY;
-    if (kbState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.S))
-      direction += Vector2.UnitY;
+    if (kbState.IsKeyDown(Keys.A))
+      targetDirection -= Vector2.UnitX;
+    if (kbState.IsKeyDown(Keys.D))
+      targetDirection += Vector2.UnitX;
+    if (kbState.IsKeyDown(Keys.W))
+      targetDirection -= Vector2.UnitY;
+    if (kbState.IsKeyDown(Keys.S))
+      targetDirection += Vector2.UnitY;
 
-    this.velocity.Direction = direction;
+    if (targetDirection != Vector2.Zero)
+    {
+      this.velocity.IncreaseVelocity(gameTime);
+      this.velocity.Direction = Angle.FromVector(targetDirection); // TODO: Direction shoudl slowly rotate toward target.
+    }
+    else
+    {
+      this.velocity.Return(gameTime);
+    }
 
     var scaler = this.velocity.GetScaler();
+
     this.BodyTransform.Position += scaler * deltaTime;
     this.TurretTransform.Position += scaler * deltaTime;
+    this.BodyTransform.Rotation = this.velocity.Direction.Radians;
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
