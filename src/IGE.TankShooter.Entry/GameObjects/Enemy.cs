@@ -7,7 +7,9 @@ using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
 
-public class Enemy : GameObject
+using Physics;
+
+public class Enemy : GameObject, IBoundingBox
 {
 
   private Vector2 Position;
@@ -32,5 +34,9 @@ public class Enemy : GameObject
   {
     spriteBatch.DrawCircle(Position, SIZE, 10, Color.White);
   }
-  
+
+  public RectangleF GetBoundingBox()
+  {
+    return new RectangleF(Position.X - SIZE / 2, Position.Y - SIZE / 2, SIZE, SIZE);
+  }
 }

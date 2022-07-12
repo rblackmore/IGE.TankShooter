@@ -8,13 +8,15 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.Sprites;
 
+using Physics;
+
 public class Bullet : GameObject
 {
   const float SPEED = 100f;
 
   private readonly Game1 tankGame;
-  private Vector2 Position { get; set; }
-  private Vector2 Velocity { get; set; }
+  public Vector2 Position { get; set; }
+  private Vector2 Velocity { get; }
   private Sprite Sprite;
   
   public Bullet(Game1 game, Texture2D texture, Vector2 targetPosition, Vector2 initialPosition)
@@ -33,11 +35,11 @@ public class Bullet : GameObject
   public override void Update(GameTime gameTime)
   {
     this.Position += this.Velocity * gameTime.GetElapsedSeconds();
+  }
 
-    // TODO: Use world coordinates.
-    if (!this.tankGame.GraphicsDevice.Viewport.Bounds.Contains(this.Position))
-    {
-      this.tankGame.Bullets.Remove(this);
-    }
+  // TODO: Extract an appropriate interface from Enemy, e.g. "ICollidable"
+  public bool IsColliding(IBoundingBox enemy)
+  {
+    return enemy.GetBoundingBox().Contains(this.Position);
   }
 }

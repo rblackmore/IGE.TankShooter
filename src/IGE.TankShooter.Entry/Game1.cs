@@ -22,9 +22,9 @@ public class Game1 : Game
   private GraphicsDeviceManager graphics;
   public SpriteBatch spriteBatch;
   private Tank tank;
-  public ISet<Bullet> Bullets = new HashSet<Bullet>();
-  public ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new CountdownTimer(3, 3, 10);
+  public LinkedList<Bullet> Bullets = new();
+  public LinkedList<Enemy> Enemies = new();
+  private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
   private Texture2D BulletTexture;
   private BackgroundMap Background;
 
@@ -39,16 +39,18 @@ public class Game1 : Game
 
   protected override void Initialize()
   {
-    this.tank = new Tank(this);
-    this.tank.Initialize();
-    
     Background = new BackgroundMap(200, 200);
+    
+    this.tank = new Tank(this, this.Background.GetBoundingBox().Center);
+    this.tank.Initialize();
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
 
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
+    var cameraCenter = Background.GetBoundingBox().Center;
+    this.Camera.Position = new Vector2(cameraCenter.X - 20f, cameraCenter.Y - 20f);
 
     this.Services.AddService(this.Camera);
 
@@ -83,8 +85,46 @@ public class Game1 : Game
     {
       enemy.Update(gameTime);
     }
+
+    CheckCollisions(gameTime);
     
     base.Update(gameTime);
+  }
+
+  /// <summary>
+  /// This would be a lot simpler with simple foreach iteration of both bullets and enemies, however there are two
+  /// reasons that we use more complex LinkedList node based iteration. The first is because we aim to remove items
+  /// after collisions, and removing from a linked list is cheaper than removing from an array. Secondly, it is
+  /// actually an Exception to remove from a list while iterating using foreach.
+  /// </summary>
+  /// <param name="gameTime"></param>
+  private void CheckCollisions(GameTime gameTime)
+  {
+    var bulletNode = this.Bullets.First;
+    while (bulletNode != null)
+    {
+      var bullet = bulletNode.Value;
+      var nextBullet = bulletNode.Next;
+      if (!this.Background.GetBoundingBox().Contains(bullet.Position.ToPoint()))
+      {
+        this.Bullets.Remove(bulletNode);
+        bulletNode = nextBullet;
+        continue;
+      }
+     
+      var enemyNode = this.Enemies.First;
+      while (enemyNode != null)
+      {
+        var nextEnemy = enemyNode.Next;
+        if (bullet.IsColliding(enemyNode.Value))
+        {
+          this.Bullets.Remove(bulletNode);
+          this.Enemies.Remove(enemyNode);
+        }
+        enemyNode = nextEnemy;
+      }
+      bulletNode = nextBullet;
+    }
   }
 
   private void MaybeFireBullet()
@@ -93,7 +133,7 @@ public class Game1 : Game
     {
       var targetScreen = Mouse.GetState().Position;
       var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      Bullets.Add(new Bullet(this, BulletTexture, target, this.tank.CurrentPosition()));
+      Bullets.AddFirst(new Bullet(this, BulletTexture, target, this.tank.CurrentPosition()));
     }
   }
 
@@ -129,7 +169,7 @@ public class Game1 : Game
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
       var distanceFromTank = new Random().NextSingle(50f, 75f);
       var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      Enemies.Add(new Enemy(spawnPosition, this.tank));
+      Enemies.AddFirst(new Enemy(spawnPosition, this.tank));
     }
   }
 

@@ -10,11 +10,13 @@ using MonoGame.Extended;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
 
+using Physics;
+
 /// <summary>
 /// Randomly generate a map of a particular size.
 /// Will generate a background layer, then add another layer on top with some flourishes to lighten up the scenery.
 /// </summary>
-public class BackgroundMap
+public class BackgroundMap : IBoundingBox
 {
 
   private TiledMap Map;
@@ -28,6 +30,8 @@ public class BackgroundMap
   private const float PercentageOfDecoratedTiles = 0.05f;
 
   private const int GlobalIdentifier = 0;
+
+  private RectangleF BoundingBox;
 
   private static readonly ushort[] BackgroundTileIndices = { 0, 1 };
   private static readonly ushort[] DecorativeTileIndices = {
@@ -49,6 +53,7 @@ public class BackgroundMap
     this.NumTilesWide = (int)((widthInWorldUnits / this.Scale) / TileWidth);
     this.NumTilesHigh = (int)((heightInWorldUnits / this.Scale) / TileHeight);
 
+    this.BoundingBox = new RectangleF(0f, 0f, widthInWorldUnits, heightInWorldUnits);
   }
 
   public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
@@ -86,5 +91,10 @@ public class BackgroundMap
     // coordinates and sizes, therefore create a scaling matrix. Multiply it by the view matrix to ensure that we
     // respect zoom/translate of the camera in addition to the scale.
     Renderer.Draw(ScaleMatrix * camera.GetViewMatrix());
+  }
+
+  public RectangleF GetBoundingBox()
+  {
+    return this.BoundingBox;
   }
 }
