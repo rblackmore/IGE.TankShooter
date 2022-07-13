@@ -15,18 +15,20 @@ using GameObjects;
 using Graphics;
 
 using MonoGame.Extended;
+using MonoGame.Extended.Collisions;
 using MonoGame.Extended.ViewportAdapters;
 
 public class Game1 : Game
 {
   private GraphicsDeviceManager graphics;
-  public SpriteBatch spriteBatch;
+  private SpriteBatch spriteBatch;
   private Tank tank;
-  public LinkedList<Bullet> Bullets = new();
-  public LinkedList<Enemy> Enemies = new();
+  private ISet<Bullet> Bullets = new HashSet<Bullet>();
+  private ISet<Enemy> Enemies = new HashSet<Enemy>();
   private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
   private Texture2D BulletTexture;
   private BackgroundMap Background;
+  private CollisionComponent CollisionComponent;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -40,8 +42,17 @@ public class Game1 : Game
   protected override void Initialize()
   {
     Background = new BackgroundMap(200, 200);
+
+    var collisionBounds = Background.BoundingBox;
+    collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
+    CollisionComponent = new CollisionComponent(collisionBounds);
     
-    this.tank = new Tank(this, this.Background.GetBoundingBox().Center);
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Bottom, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Top, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Left, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Right, Background.BoundingBox));
+    
+    this.tank = new Tank(this, this.Background.BoundingBox.Center);
     this.tank.Initialize();
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
@@ -49,7 +60,7 @@ public class Game1 : Game
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
-    var cameraCenter = Background.GetBoundingBox().Center;
+    var cameraCenter = Background.BoundingBox.Center;
     this.Camera.Position = new Vector2(cameraCenter.X - 20f, cameraCenter.Y - 20f);
 
     this.Services.AddService(this.Camera);
@@ -85,46 +96,10 @@ public class Game1 : Game
     {
       enemy.Update(gameTime);
     }
-
-    CheckCollisions(gameTime);
     
-    base.Update(gameTime);
-  }
+    CollisionComponent.Update(gameTime);
 
-  /// <summary>
-  /// This would be a lot simpler with simple foreach iteration of both bullets and enemies, however there are two
-  /// reasons that we use more complex LinkedList node based iteration. The first is because we aim to remove items
-  /// after collisions, and removing from a linked list is cheaper than removing from an array. Secondly, it is
-  /// actually an Exception to remove from a list while iterating using foreach.
-  /// </summary>
-  /// <param name="gameTime"></param>
-  private void CheckCollisions(GameTime gameTime)
-  {
-    var bulletNode = this.Bullets.First;
-    while (bulletNode != null)
-    {
-      var bullet = bulletNode.Value;
-      var nextBullet = bulletNode.Next;
-      if (!this.Background.GetBoundingBox().Contains(bullet.Position.ToPoint()))
-      {
-        this.Bullets.Remove(bulletNode);
-        bulletNode = nextBullet;
-        continue;
-      }
-     
-      var enemyNode = this.Enemies.First;
-      while (enemyNode != null)
-      {
-        var nextEnemy = enemyNode.Next;
-        if (bullet.IsColliding(enemyNode.Value))
-        {
-          this.Bullets.Remove(bulletNode);
-          this.Enemies.Remove(enemyNode);
-        }
-        enemyNode = nextEnemy;
-      }
-      bulletNode = nextBullet;
-    }
+    base.Update(gameTime);
   }
 
   private void MaybeFireBullet()
@@ -133,7 +108,10 @@ public class Game1 : Game
     {
       var targetScreen = Mouse.GetState().Position;
       var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      Bullets.AddFirst(new Bullet(this, BulletTexture, target, this.tank.CurrentPosition()));
+      var bullet = new Bullet(this, BulletTexture, target, this.tank.CurrentPosition());
+      Bullets.Add(bullet);
+      CollisionComponent.Insert(bullet);
+
     }
   }
 
@@ -169,7 +147,9 @@ public class Game1 : Game
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
       var distanceFromTank = new Random().NextSingle(50f, 75f);
       var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      Enemies.AddFirst(new Enemy(spawnPosition, this.tank));
+      var enemy = new Enemy(spawnPosition, this.tank);
+      Enemies.Add(enemy);
+      CollisionComponent.Insert(enemy);
     }
   }
 
@@ -199,5 +179,20 @@ public class Game1 : Game
     this.spriteBatch.End();
 
     base.Draw(gameTime);
+  }
+
+  public void RemoveBullet(Bullet bullet)
+  {
+    Bullets.Remove(bullet);
+    CollisionComponent.Remove(bullet);
+  }
+
+  public void OnEnemyHit(Bullet bullet, Enemy enemy)
+  {
+    // TODO: Queue explosion, damage, points, etc.
+    Enemies.Remove(enemy);
+    CollisionComponent.Remove(enemy);
+    
+    RemoveBullet(bullet);
   }
 }
