@@ -1,5 +1,6 @@
 ﻿namespace IGE.TankShooter.Entry.GameObjects;
 using System;
+using System.Diagnostics;
 
 using IGE.TankShooter.Entry.Core;
 using IGE.TankShooter.Entry.Graphics;
@@ -22,6 +23,7 @@ public class Tank : GameObject
 
   private Game1 tankGame;
 
+  private const float MAX_TANK_DIRECTION_CHANGE_RATE = MathF.PI / 3; // Radians per second.
   private const float MAX_TURRET_ROTATION_SPEED = 6f; // degrees per seconds
   private const float ACCELERATION = 5.0f; // Units per second.
 
@@ -36,7 +38,7 @@ public class Tank : GameObject
 
   public override void Initialize()
   {
-    this.velocity = new MovementVelocity(0f, 0f);
+    this.velocity = new MovementVelocity(Vector2.UnitX, 0f);
     this.velocity.MaxVelocity = 10.0f;
     this.velocity.MinVelocity = -10.0f;
     this.velocity.Acceleration = ACCELERATION;
@@ -55,18 +57,18 @@ public class Tank : GameObject
 
     this.BodySprite = new Sprite(bodyTexture);
     this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
-    this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
+    //this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
 
     this.TurretSprite = new Sprite(turretTexture);
     this.TurretTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
-    this.TurretTransform.Parent = this.BodyTransform;
+    //this.TurretTransform.Parent = this.BodyTransform;
 
   }
 
-  private void BodyTransform_TranformUpdated()
-  {
-    this.TurretTransform.Position = this.BodyTransform.Position -= Vector2.UnitY * 10;
-  }
+  //private void BodyTransform_TranformUpdated()
+  //{
+  //  this.TurretTransform.Position = this.BodyTransform.Position -= Vector2.UnitY * 10;
+  //}
 
   public override void Update(GameTime gameTime)
   {
@@ -110,6 +112,19 @@ public class Tank : GameObject
     this.TurretTransform.Rotation = (currentAngle + toRotate * MAX_TURRET_ROTATION_SPEED * gameTime.GetElapsedSeconds()) * ((float)Math.PI / 180);
   }
 
+  private void RotateTankBodyTo(GameTime gameTime)
+  {
+    this.BodyTransform.Rotation = this.velocity.Direction.ToAngle();
+  }
+
+  private void UpdateTankDirection(GameTime gameTime)
+  {
+    var deltaTime = gameTime.GetElapsedSeconds();
+
+    this.velocity.Direction =
+      Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_TANK_DIRECTION_CHANGE_RATE);
+  }
+
   private void MoveTank(GameTime gameTime)
   {
     var deltaTime = gameTime.GetElapsedSeconds();
@@ -130,18 +145,22 @@ public class Tank : GameObject
     if (targetDirection != Vector2.Zero)
     {
       this.velocity.IncreaseVelocity(gameTime);
-      this.velocity.Direction = Angle.FromVector(targetDirection); // TODO: Direction shoudl slowly rotate toward target.
+      this.velocity.TargetDirection = targetDirection; // TODO: Direction shoudl slowly rotate toward target.
+      //Debug.WriteLine("Direction: " + this.velocity.Direction);
     }
     else
     {
-      this.velocity.Return(gameTime);
+      this.velocity.ReturnToZero(gameTime);
     }
 
+    UpdateTankDirection(gameTime);
+    RotateTankBodyTo(gameTime);
     var scaler = this.velocity.GetScaler();
 
     this.BodyTransform.Position += scaler * deltaTime;
     this.TurretTransform.Position += scaler * deltaTime;
-    this.BodyTransform.Rotation = this.velocity.Direction.Radians;
+
+    //Debug.WriteLine("Direction: " + this.velocity.Direction);
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

@@ -1,5 +1,7 @@
 ﻿namespace IGE.TankShooter.Entry.Core;
 
+using System;
+
 using Microsoft.Xna.Framework;
 
 using MonoGame.Extended;
@@ -8,9 +10,9 @@ public class MovementVelocity
 {
   private float velocity;
 
-  public MovementVelocity(float direction, float velocity)
+  public MovementVelocity(Vector2 direction, float velocity)
   {
-    Direction = new Angle(direction);
+    Direction = direction;
     Velocity = velocity;
   }
 
@@ -29,7 +31,9 @@ public class MovementVelocity
   /// <summary>
   /// Current Direction.
   /// </summary>
-  public Angle Direction { get; set; }
+  public Vector2 Direction { get; set; }
+
+  public Vector2 TargetDirection { get; set; }
 
   /// <summary>
   /// Current Velocity.
@@ -39,10 +43,7 @@ public class MovementVelocity
     get => this.velocity;
     set
     {
-      this.velocity = value;
-      this.velocity = (this.velocity >= this.MaxVelocity) ? this.MaxVelocity
-        : (this.velocity <= this.MinVelocity) ? this.MinVelocity
-        : this.velocity;
+      this.velocity = MathHelper.Clamp(value, this.MinVelocity, this.MaxVelocity);
     }
   }
 
@@ -70,7 +71,7 @@ public class MovementVelocity
   /// Returns the <see cref="Velocity"/> back to 0.
   /// </summary>
   /// <param name="gameTime">Current Gametime.</param>
-  public void Return(GameTime gameTime)
+  public void ReturnToZero(GameTime gameTime)
   {
 
     if (this.Velocity == 0)
@@ -94,7 +95,8 @@ public class MovementVelocity
     if (this.Velocity == 0)
       return Vector2.Zero;
 
-    return this.Direction.ToUnitVector();
+    return this.Direction.NormalizedCopy();
+
   }
 
   public Vector2 GetScaler()
