@@ -2,8 +2,7 @@
 using System;
 using System.Diagnostics;
 
-using IGE.TankShooter.Entry.Core;
-using IGE.TankShooter.Entry.Graphics;
+using Core;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -28,10 +27,12 @@ public class Tank : GameObject
   private const float ACCELERATION = 5.0f; // Units per second.
 
   private MovementVelocity velocity;
+  private readonly Point2 initialPosition;
 
-  public Tank(Game1 tankGame)
+  public Tank(Game1 tankGame, Point2 initialPosition)
   {
     this.tankGame = tankGame;
+    this.initialPosition = initialPosition;
   }
 
   public Vector2 CurrentPosition() => BodyTransform.Position;
@@ -56,19 +57,19 @@ public class Tank : GameObject
     var spriteScale = 3f / bodyTexture.Width;
 
     this.BodySprite = new Sprite(bodyTexture);
-    this.BodyTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
-    //this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
+    this.BodyTransform = new Transform2(new Vector2(initialPosition.X, initialPosition.Y), 0.0f, new Vector2(spriteScale));
+    this.BodyTransform.TranformUpdated += BodyTransform_TranformUpdated;
 
     this.TurretSprite = new Sprite(turretTexture);
-    this.TurretTransform = new Transform2(new Vector2(10, 10), 0.0f, new Vector2(spriteScale));
-    //this.TurretTransform.Parent = this.BodyTransform;
+    this.TurretTransform = new Transform2(new Vector2(initialPosition.X, initialPosition.Y), 0.0f, new Vector2(spriteScale));
+    this.TurretTransform.Parent = this.BodyTransform;
 
   }
 
-  //private void BodyTransform_TranformUpdated()
-  //{
-  //  this.TurretTransform.Position = this.BodyTransform.Position -= Vector2.UnitY * 10;
-  //}
+  private void BodyTransform_TranformUpdated()
+  {
+    this.TurretTransform.Position = this.BodyTransform.Position -= Vector2.UnitY * 10;
+  }
 
   public override void Update(GameTime gameTime)
   {

@@ -29,6 +29,8 @@ public class BackgroundMap
 
   private const int GlobalIdentifier = 0;
 
+  public RectangleF BoundingBox { get; }
+
   private static readonly ushort[] BackgroundTileIndices = { 0, 1 };
   private static readonly ushort[] DecorativeTileIndices = {
     55, 56, 57, 58, 59, 60,
@@ -49,6 +51,7 @@ public class BackgroundMap
     this.NumTilesWide = (int)((widthInWorldUnits / this.Scale) / TileWidth);
     this.NumTilesHigh = (int)((heightInWorldUnits / this.Scale) / TileHeight);
 
+    this.BoundingBox = new RectangleF(0f, 0f, widthInWorldUnits, heightInWorldUnits);
   }
 
   public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)

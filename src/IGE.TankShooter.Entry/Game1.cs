@@ -15,18 +15,20 @@ using GameObjects;
 using Graphics;
 
 using MonoGame.Extended;
+using MonoGame.Extended.Collisions;
 using MonoGame.Extended.ViewportAdapters;
 
 public class Game1 : Game
 {
   private GraphicsDeviceManager graphics;
-  public SpriteBatch spriteBatch;
+  private SpriteBatch spriteBatch;
   private Tank tank;
-  public ISet<Bullet> Bullets = new HashSet<Bullet>();
-  public ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new CountdownTimer(3, 3, 10);
+  private ISet<Bullet> Bullets = new HashSet<Bullet>();
+  private ISet<Enemy> Enemies = new HashSet<Enemy>();
+  private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
   private Texture2D BulletTexture;
   private BackgroundMap Background;
+  private CollisionComponent CollisionComponent;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -39,16 +41,27 @@ public class Game1 : Game
 
   protected override void Initialize()
   {
-    this.tank = new Tank(this);
-    this.tank.Initialize();
-    
     Background = new BackgroundMap(200, 200);
+
+    var collisionBounds = Background.BoundingBox;
+    collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
+    CollisionComponent = new CollisionComponent(collisionBounds);
+    
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Bottom, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Top, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Left, Background.BoundingBox));
+    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Right, Background.BoundingBox));
+    
+    this.tank = new Tank(this, this.Background.BoundingBox.Center);
+    this.tank.Initialize();
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
 
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
+    var cameraCenter = Background.BoundingBox.Center;
+    this.Camera.Position = new Vector2(cameraCenter.X - 20f, cameraCenter.Y - 20f);
 
     this.Services.AddService(this.Camera);
 
@@ -84,6 +97,8 @@ public class Game1 : Game
       enemy.Update(gameTime);
     }
     
+    CollisionComponent.Update(gameTime);
+
     base.Update(gameTime);
   }
 
@@ -93,7 +108,10 @@ public class Game1 : Game
     {
       var targetScreen = Mouse.GetState().Position;
       var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      Bullets.Add(new Bullet(this, BulletTexture, target, this.tank.CurrentPosition()));
+      var bullet = new Bullet(this, BulletTexture, target, this.tank.CurrentPosition());
+      Bullets.Add(bullet);
+      CollisionComponent.Insert(bullet);
+
     }
   }
 
@@ -129,7 +147,9 @@ public class Game1 : Game
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
       var distanceFromTank = new Random().NextSingle(50f, 75f);
       var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      Enemies.Add(new Enemy(spawnPosition, this.tank));
+      var enemy = new Enemy(spawnPosition, this.tank);
+      Enemies.Add(enemy);
+      CollisionComponent.Insert(enemy);
     }
   }
 
@@ -137,7 +157,10 @@ public class Game1 : Game
   {
     GraphicsDevice.Clear(Color.Black);
 
-    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix());
+    // See https://community.monogame.net/t/screen-tearing-with-monogame-extended-and-tiled/14757 for details of what
+    // SamplerState.PointClamp does. It is to stop weird lines due to floating point weirdness between background tile
+    // rows when zooming.
+    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
     
     this.Background.Draw(Camera);
 
@@ -156,5 +179,20 @@ public class Game1 : Game
     this.spriteBatch.End();
 
     base.Draw(gameTime);
+  }
+
+  public void RemoveBullet(Bullet bullet)
+  {
+    Bullets.Remove(bullet);
+    CollisionComponent.Remove(bullet);
+  }
+
+  public void OnEnemyHit(Bullet bullet, Enemy enemy)
+  {
+    // TODO: Queue explosion, damage, points, etc.
+    Enemies.Remove(enemy);
+    CollisionComponent.Remove(enemy);
+    
+    RemoveBullet(bullet);
   }
 }
