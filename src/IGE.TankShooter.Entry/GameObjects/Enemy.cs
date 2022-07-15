@@ -3,25 +3,36 @@
 using Core;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Sprites;
 
 public class Enemy : GameObject, ICollisionActor
 {
 
   private Tank Target;
+  private Texture2D Texture;
+  private Sprite Sprite;
   
-  private const float SPEED = 10f;
-  private const float SIZE = 2f;
+  private const float SPEED = 5f;
+  private const float SIZE = 1f;
   
-  public Enemy(Vector2 initialPosition, Tank target)
+  public Enemy(Vector2 initialPosition, Texture2D texture, Tank target)
   {
     Target = target;
     Bounds = new CircleF(initialPosition.ToPoint(), SIZE);
+    Texture = texture;
+    Sprite = new Sprite(Texture);
   }
-  
+
+  public override void LoadContent(ContentManager content)
+  {
+    
+  }
+
   public override void Update(GameTime gameTime)
   {
     // Naively move toward the tank. In the future, be more intelligent.
@@ -30,7 +41,7 @@ public class Enemy : GameObject, ICollisionActor
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
-    spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.White);
+    spriteBatch.Draw(Sprite, this.Bounds.Position, 0f, new Vector2(SIZE / Texture.Width));
   }
 
   public void OnCollision(CollisionEventArgs collisionInfo)

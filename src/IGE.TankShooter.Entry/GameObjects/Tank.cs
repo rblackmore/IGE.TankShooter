@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Core;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -49,10 +50,10 @@ public class Tank : GameObject
     base.Initialize();
   }
 
-  public override void LoadContent()
+  public override void LoadContent(ContentManager content)
   {
-    var bodyTexture = tankGame.Content.Load<Texture2D>("tankBody_red_outline");
-    var turretTexture = tankGame.Content.Load<Texture2D>("tankRed_barrel1_outline");
+    var bodyTexture = content.Load<Texture2D>("tankBody_red_outline");
+    var turretTexture = content.Load<Texture2D>("tankRed_barrel1_outline");
 
     // Calculate scale based on a desired width of 3m.
     // That same scale factor will be used for the height too but we don't specify a desired height, rather just take

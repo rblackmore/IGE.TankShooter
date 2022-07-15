@@ -25,8 +25,9 @@ public class Game1 : Game
   private Tank tank;
   private ISet<Bullet> Bullets = new HashSet<Bullet>();
   private ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
+  private CountdownTimer EnemySpawnTimer = new(1, 0.5f, 1f);
   private Texture2D BulletTexture;
+  private Texture2D[] EnemyPersonTextures;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
   private CameraOperator CameraOperator;
@@ -71,8 +72,15 @@ public class Game1 : Game
   protected override void LoadContent()
   {
     spriteBatch = new SpriteBatch(GraphicsDevice);
-    this.tank.LoadContent();
+    this.tank.LoadContent(Content);
     this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
+    this.EnemyPersonTextures = new Texture2D[]
+    {
+      Content.Load<Texture2D>("enemy_person_a"),
+      Content.Load<Texture2D>("enemy_person_b"),
+      Content.Load<Texture2D>("enemy_person_c"),
+      Content.Load<Texture2D>("enemy_person_d"),
+    };
     Background.LoadContent(Content, GraphicsDevice);
     
     // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
@@ -124,10 +132,11 @@ public class Game1 : Game
   {
     if (this.EnemySpawnTimer.Update(gameTime))
     {
+      var random = new Random();
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
-      var distanceFromTank = new Random().NextSingle(50f, 75f);
+      var distanceFromTank = random.NextSingle(50f, 75f);
       var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      var enemy = new Enemy(spawnPosition, this.tank);
+      var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
       Enemies.Add(enemy);
       CollisionComponent.Insert(enemy);
     }
