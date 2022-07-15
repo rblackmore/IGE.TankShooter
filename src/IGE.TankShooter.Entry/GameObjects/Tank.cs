@@ -24,7 +24,7 @@ public class Tank : GameObject
   private Game1 tankGame;
 
   private const float MAX_TANK_DIRECTION_CHANGE_RATE = MathF.PI / 3; // Radians per second.
-  private const float MAX_TURRET_ROTATION_SPEED = 6f; // degrees per seconds
+  private const float MAX_TURRET_ROTATION_SPEED = 5f; // degrees per seconds
   public const float ACCELERATION = 5.0f; // Units per second.
   public const float MIN_SPEED = 0.0f; // Units per second.
   public const float MAX_SPEED = 10.0f; // Units per second.
@@ -40,6 +40,7 @@ public class Tank : GameObject
 
   public Vector2 CurrentPosition() => BodyTransform.Position;
   public float CurrentSpeed() => this.velocity.GetScaler().Length();
+  public float CurrentTurretAngle() => this.TurretTransform.Rotation;
 
   public override void Initialize()
   {
@@ -93,7 +94,10 @@ public class Tank : GameObject
       currentAngle -= 360;
     }
 
-    var targetAngle = (target - CurrentPosition()).ToAngle() * 180 / (float)Math.PI;
+    // Not sure what math is doing such that we need to rotate a further 180 degrees, but possibly something like
+    // the world coordinate system being upside down compared to what the intuitive way of calculating angles would
+    // expect?
+    var targetAngle = (target - CurrentPosition()).ToAngle() * 180 / (float)Math.PI + 180;
     while (targetAngle < 0)
     {
       targetAngle += 360;
@@ -150,8 +154,7 @@ public class Tank : GameObject
     if (targetDirection != Vector2.Zero)
     {
       this.velocity.IncreaseVelocity(gameTime);
-      this.velocity.TargetDirection = targetDirection; // TODO: Direction shoudl slowly rotate toward target.
-      //Debug.WriteLine("Direction: " + this.velocity.Direction);
+      this.velocity.TargetDirection = targetDirection; // TODO: Direction should slowly rotate toward target.
     }
     else
     {
@@ -164,8 +167,6 @@ public class Tank : GameObject
 
     this.BodyTransform.Position += scaler * deltaTime;
     this.TurretTransform.Position += scaler * deltaTime;
-
-    //Debug.WriteLine("Direction: " + this.velocity.Direction);
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

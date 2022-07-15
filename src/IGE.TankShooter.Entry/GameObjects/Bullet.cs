@@ -20,10 +20,10 @@ public class Bullet : GameObject, ICollisionActor
   private Vector2 Velocity { get; }
   private Sprite Sprite;
   
-  public Bullet(Game1 game, Texture2D texture, Vector2 targetPosition, Vector2 initialPosition)
+  public Bullet(Game1 game, Texture2D texture, Vector2 direction, Vector2 initialPosition)
   {
     this.Bounds = new CircleF(initialPosition.ToPoint(), 0.15f);
-    this.Velocity = (targetPosition - initialPosition).NormalizedCopy() * SPEED;
+    this.Velocity = direction.NormalizedCopy() * SPEED;
     this.tankGame = game;
     this.Sprite = new Sprite(texture);
   }

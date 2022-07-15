@@ -119,12 +119,12 @@ public class Game1 : Game
   {
     if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
     {
-      var targetScreen = Mouse.GetState().Position;
-      var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      var bullet = new Bullet(this, BulletTexture, target, this.tank.CurrentPosition());
+      // If required, switch back to this to fire where the mouse is pointing, not where the turret is pushing.
+      // var targetScreen = Mouse.GetState().Position;
+      // var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
+      var bullet = new Bullet(this, BulletTexture, Vector2.UnitY.Rotate(tank.CurrentTurretAngle()), this.tank.CurrentPosition());
       Bullets.Add(bullet);
       CollisionComponent.Insert(bullet);
-
     }
   }
 
