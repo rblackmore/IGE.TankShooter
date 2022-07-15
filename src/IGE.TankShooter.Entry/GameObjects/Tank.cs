@@ -24,7 +24,9 @@ public class Tank : GameObject
 
   private const float MAX_TANK_DIRECTION_CHANGE_RATE = MathF.PI / 3; // Radians per second.
   private const float MAX_TURRET_ROTATION_SPEED = 6f; // degrees per seconds
-  private const float ACCELERATION = 5.0f; // Units per second.
+  public const float ACCELERATION = 5.0f; // Units per second.
+  public const float MIN_SPEED = 0.0f; // Units per second.
+  public const float MAX_SPEED = 10.0f; // Units per second.
 
   private MovementVelocity velocity;
   private readonly Point2 initialPosition;
@@ -36,6 +38,7 @@ public class Tank : GameObject
   }
 
   public Vector2 CurrentPosition() => BodyTransform.Position;
+  public float CurrentSpeed() => this.velocity.GetScaler().Length();
 
   public override void Initialize()
   {

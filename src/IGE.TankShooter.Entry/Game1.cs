@@ -29,6 +29,7 @@ public class Game1 : Game
   private Texture2D BulletTexture;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
+  private CameraOperator CameraOperator;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -60,8 +61,7 @@ public class Game1 : Game
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
-    var cameraCenter = Background.BoundingBox.Center;
-    this.Camera.Position = new Vector2(cameraCenter.X - 20f, cameraCenter.Y - 20f);
+    CameraOperator = new CameraOperator(this.tank, this.Camera);
 
     this.Services.AddService(this.Camera);
 
@@ -74,6 +74,10 @@ public class Game1 : Game
     this.tank.LoadContent();
     this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
     Background.LoadContent(Content, GraphicsDevice);
+    
+    // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
+    // be calculated once we've loaded its textures and decided how much we need to scale them.
+    CameraOperator.CutTo(this.tank.CurrentPosition());
   }
 
   protected override void Update(GameTime gameTime)
@@ -84,8 +88,10 @@ public class Game1 : Game
     MaybeFireBullet();
     MaybeSpawnEnemy(gameTime);
     TranslateCamera();
-
+    
     this.tank.Update(gameTime);
+    CameraOperator.Update(gameTime);
+
     
     foreach (var bullet in this.Bullets)
     {
