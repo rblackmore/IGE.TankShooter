@@ -87,7 +87,6 @@ public class Game1 : Game
 
     MaybeFireBullet();
     MaybeSpawnEnemy(gameTime);
-    TranslateCamera();
     
     this.tank.Update(gameTime);
     CameraOperator.Update(gameTime);
@@ -119,31 +118,6 @@ public class Game1 : Game
       CollisionComponent.Insert(bullet);
 
     }
-  }
-
-  private void TranslateCamera()
-  {
-    //TODO: Bad code is bad.
-    var direction = Vector2.Zero;
-
-    var kbState = KeyboardExtended.GetState();
-
-    if (kbState.IsKeyDown(Keys.Up))
-      direction -= Vector2.UnitY;
-    if (kbState.IsKeyDown(Keys.Down))
-      direction += Vector2.UnitY;
-    if (kbState.IsKeyDown(Keys.Left))
-      direction -= Vector2.UnitX;
-    if (kbState.IsKeyDown(Keys.Right))
-      direction += Vector2.UnitX;
-
-    this.Camera.Move(direction);
-
-    if (kbState.WasKeyJustDown(Keys.O))
-      this.Camera.Zoom -= 0.1f;
-    if (kbState.WasKeyJustDown(Keys.L))
-      this.Camera.Zoom += 0.1f;
-
   }
 
   private void MaybeSpawnEnemy(GameTime gameTime)
