@@ -25,7 +25,7 @@ public class Game1 : Game
   private Tank tank;
   private ISet<Bullet> Bullets = new HashSet<Bullet>();
   private ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new(1, 0.5f, 1f);
+  private CountdownTimer EnemySpawnTimer = new(1, 1f, 3f);
   private Texture2D BulletTexture;
   private Texture2D[] EnemyPersonTextures;
   private BackgroundMap Background;

@@ -1,5 +1,7 @@
 ﻿namespace IGE.TankShooter.Entry.GameObjects;
 
+using System;
+
 using Core;
 
 using Microsoft.Xna.Framework;
@@ -16,6 +18,7 @@ public class Enemy : GameObject, ICollisionActor
   private Tank Target;
   private Texture2D Texture;
   private Sprite Sprite;
+  private Vector2 Direction;
   
   private const float SPEED = 5f;
   private const float SIZE = 1f;
@@ -36,12 +39,13 @@ public class Enemy : GameObject, ICollisionActor
   public override void Update(GameTime gameTime)
   {
     // Naively move toward the tank. In the future, be more intelligent.
-    this.Bounds.Position += (Target.CurrentPosition() - new Vector2(this.Bounds.Position.X, this.Bounds.Position.Y)).NormalizedCopy() * gameTime.GetElapsedSeconds() * SPEED;
+    this.Direction = (Target.CurrentPosition() - new Vector2(this.Bounds.Position.X, this.Bounds.Position.Y)).NormalizedCopy();
+    this.Bounds.Position += this.Direction * gameTime.GetElapsedSeconds() * SPEED;
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
-    spriteBatch.Draw(Sprite, this.Bounds.Position, 0f, new Vector2(SIZE / Texture.Width));
+    spriteBatch.Draw(Sprite, this.Bounds.Position, this.Direction.ToAngle() + (float)Math.PI / 2f, new Vector2(SIZE / Texture.Width));
   }
 
   public void OnCollision(CollisionEventArgs collisionInfo)
