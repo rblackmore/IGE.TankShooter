@@ -70,7 +70,7 @@ public class CameraOperator
   
   public void Update(GameTime gameTime)
   {
-    this.MoveTo(this.tank.CurrentPosition());
+    this.MoveTo(this.tank.CurrentPosition);
     var positionDelta = (this.desiredPosition - this.camera.Position);
     var distance = positionDelta.Length();
     if (distance > BUFFER_DISTANCE)
@@ -80,7 +80,7 @@ public class CameraOperator
       this.camera.Position += this.movement.GetScaler() * gameTime.GetElapsedSeconds();
     }
 
-    var speedFactor = (Tank.MAX_SPEED - this.tank.CurrentSpeed()) / Tank.MAX_SPEED;
+    var speedFactor = (Tank.MAX_SPEED - this.tank.CurrentSpeed) / Tank.MAX_SPEED;
     this.desiredZoom = MathHelper.Lerp(MIN_ZOOM, MAX_ZOOM, speedFactor);
     var zoomDelta = (this.desiredZoom - this.camera.Zoom);
     if (Math.Abs(zoomDelta) > BUFFER_ZOOM)

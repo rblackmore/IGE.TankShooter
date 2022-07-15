@@ -38,9 +38,9 @@ public class Tank : GameObject
     this.initialPosition = initialPosition;
   }
 
-  public Vector2 CurrentPosition() => BodyTransform.Position;
-  public float CurrentSpeed() => this.velocity.GetScaler().Length();
-  public float CurrentTurretAngle() => this.TurretTransform.Rotation;
+  public Vector2 CurrentPosition => BodyTransform.Position;
+  public float CurrentSpeed => this.velocity.GetScaler().Length();
+  public float CurrentTurretAngle => this.TurretTransform.Rotation;
 
   public override void Initialize()
   {
@@ -97,7 +97,7 @@ public class Tank : GameObject
     // Not sure what math is doing such that we need to rotate a further 180 degrees, but possibly something like
     // the world coordinate system being upside down compared to what the intuitive way of calculating angles would
     // expect?
-    var targetAngle = (target - CurrentPosition()).ToAngle() * 180 / (float)Math.PI + 180;
+    var targetAngle = (target - CurrentPosition).ToAngle() * 180 / (float)Math.PI + 180;
     while (targetAngle < 0)
     {
       targetAngle += 360;

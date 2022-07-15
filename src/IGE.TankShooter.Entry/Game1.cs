@@ -85,7 +85,7 @@ public class Game1 : Game
     
     // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
     // be calculated once we've loaded its textures and decided how much we need to scale them.
-    CameraOperator.CutTo(this.tank.CurrentPosition());
+    CameraOperator.CutTo(this.tank.CurrentPosition);
   }
 
   protected override void Update(GameTime gameTime)
@@ -122,7 +122,7 @@ public class Game1 : Game
       // If required, switch back to this to fire where the mouse is pointing, not where the turret is pushing.
       // var targetScreen = Mouse.GetState().Position;
       // var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      var bullet = new Bullet(this, BulletTexture, Vector2.UnitY.Rotate(tank.CurrentTurretAngle()), this.tank.CurrentPosition());
+      var bullet = new Bullet(this, BulletTexture, Vector2.UnitY.Rotate(tank.CurrentTurretAngle), this.tank.CurrentPosition);
       Bullets.Add(bullet);
       CollisionComponent.Insert(bullet);
     }
@@ -135,7 +135,7 @@ public class Game1 : Game
       var random = new Random();
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
       var distanceFromTank = random.NextSingle(50f, 75f);
-      var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
+      var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
       var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
       Enemies.Add(enemy);
       CollisionComponent.Insert(enemy);

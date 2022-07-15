@@ -39,7 +39,7 @@ public class Enemy : GameObject, ICollisionActor
   public override void Update(GameTime gameTime)
   {
     // Naively move toward the tank. In the future, be more intelligent.
-    this.Direction = (Target.CurrentPosition() - new Vector2(this.Bounds.Position.X, this.Bounds.Position.Y)).NormalizedCopy();
+    this.Direction = (Target.CurrentPosition - new Vector2(this.Bounds.Position.X, this.Bounds.Position.Y)).NormalizedCopy();
     this.Bounds.Position += this.Direction * gameTime.GetElapsedSeconds() * SPEED;
   }
 
