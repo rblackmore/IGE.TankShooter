@@ -29,7 +29,6 @@ public class Game1 : Game
   private CountdownTimer EnemySpawnTimer = new(1, 1f, 3f);
   private Texture2D CrosshairTexture;
   private Sprite CrosshairSprite;
-  private Texture2D BulletTexture;
   private Texture2D[] EnemyPersonTextures;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
@@ -79,7 +78,6 @@ public class Game1 : Game
     this.tank.LoadContent(Content);
     this.CrosshairTexture = Content.Load<Texture2D>("crosshair061");
     this.CrosshairSprite = new Sprite(this.CrosshairTexture);
-    this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
     this.EnemyPersonTextures = new Texture2D[]
     {
       Content.Load<Texture2D>("enemy_person_a"),
@@ -128,7 +126,7 @@ public class Game1 : Game
       // If required, switch back to this to fire where the mouse is pointing, not where the turret is pushing.
       // var targetScreen = Mouse.GetState().Position;
       // var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      var bullet = new Bullet(this, BulletTexture, Vector2.UnitY.Rotate(tank.CurrentTurretAngle), this.tank.CurrentPosition);
+      var bullet = this.tank.FireBullet();
       Bullets.Add(bullet);
       CollisionComponent.Insert(bullet);
     }
