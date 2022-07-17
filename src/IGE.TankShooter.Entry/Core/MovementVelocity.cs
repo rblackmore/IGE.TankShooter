@@ -90,6 +90,14 @@ public class MovementVelocity
     }
   }
 
+  /// <summary>
+  /// Force clear the movement velocity associated with this without any animation.
+  /// </summary>
+  public void Clear()
+  {
+    this.Velocity = 0f;
+  }
+
   public Vector2 GetNormalizedDirection()
   {
     if (this.Velocity == 0)
