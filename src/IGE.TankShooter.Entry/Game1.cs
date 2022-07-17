@@ -16,6 +16,7 @@ using Graphics;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Sprites;
 using MonoGame.Extended.ViewportAdapters;
 
 public class Game1 : Game
@@ -26,6 +27,8 @@ public class Game1 : Game
   private ISet<Bullet> Bullets = new HashSet<Bullet>();
   private ISet<Enemy> Enemies = new HashSet<Enemy>();
   private CountdownTimer EnemySpawnTimer = new(1, 1f, 3f);
+  private Texture2D CrosshairTexture;
+  private Sprite CrosshairSprite;
   private Texture2D BulletTexture;
   private Texture2D[] EnemyPersonTextures;
   private BackgroundMap Background;
@@ -43,6 +46,7 @@ public class Game1 : Game
 
   protected override void Initialize()
   {
+    IsMouseVisible = false;
     Background = new BackgroundMap(200, 200);
 
     var collisionBounds = Background.BoundingBox;
@@ -73,6 +77,8 @@ public class Game1 : Game
   {
     spriteBatch = new SpriteBatch(GraphicsDevice);
     this.tank.LoadContent(Content);
+    this.CrosshairTexture = Content.Load<Texture2D>("crosshair061");
+    this.CrosshairSprite = new Sprite(this.CrosshairTexture);
     this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
     this.EnemyPersonTextures = new Texture2D[]
     {
@@ -165,9 +171,18 @@ public class Game1 : Game
       enemy.Draw(gameTime, spriteBatch);
     }
 
+    // Always draw last so as to not obscure.
+    this.DrawCursor();
     this.spriteBatch.End();
 
     base.Draw(gameTime);
+  }
+
+  private void DrawCursor()
+  {
+    var mousePosition = this.Camera.ScreenToWorld(Mouse.GetState().Position.ToVector2());
+    var scale = 2f / CrosshairTexture.Width;
+    this.spriteBatch.Draw(CrosshairSprite, mousePosition, 0f, new Vector2(scale));
   }
 
   public void RemoveBullet(Bullet bullet)

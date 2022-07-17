@@ -37,6 +37,18 @@
 /processorParam:TextureFormat=Color
 /build:bulletSand3_outline.png
 
+#begin crosshair061.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:crosshair061.png
+
 #begin enemy_person_a.png
 /importer:TextureImporter
 /processor:TextureProcessor
