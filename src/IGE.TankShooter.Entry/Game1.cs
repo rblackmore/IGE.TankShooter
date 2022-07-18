@@ -23,6 +23,8 @@ using MonoGame.Extended.ViewportAdapters;
 
 public class Game1 : Game
 {
+  private float targetFrameRate = 200f;
+
   private GraphicsDeviceManager graphics;
   private SpriteBatch spriteBatch;
   private Tank tank;
@@ -47,6 +49,10 @@ public class Game1 : Game
 
   protected override void Initialize()
   {
+    this.IsFixedTimeStep = true;
+    this.TargetElapsedTime = TimeSpan.FromMilliseconds(1000f / targetFrameRate);
+    this.graphics.SynchronizeWithVerticalRetrace = false;
+    this.graphics.ApplyChanges();
     Background = new BackgroundMap(200, 200);
     this.EnemySpawnTimer.CountdownTriggered += MaybeSpawnEnemy;
 
