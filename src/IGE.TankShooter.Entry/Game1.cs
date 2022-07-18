@@ -71,9 +71,8 @@ public class Game1 : Game
     this.textOverlay = new TextOverlay(this);
     this.textOverlay.Initialize();
 
-    this.textOverlay.Add(new TextBlock { Text = "FPS: 59.7" });
-    this.textOverlay.Add(new TextBlock { Text = "Score: 9001" });
-    this.textOverlay.Add(new TextBlock { Text = "Enemies: 47" });
+    this.textOverlay.Add(new SimpleTextValueImplementation("FPS: 59.7"));
+    this.textOverlay.Add(new SimpleTextValueImplementation("Score: 9001"));
 
     base.Initialize();
   }
