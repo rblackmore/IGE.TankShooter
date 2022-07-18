@@ -1,5 +1,6 @@
-﻿namespace IGE.TankShooter.Entry.Stats;
-using System;
+﻿namespace IGE.TankShooter.Entry.Core.StatsDisplay;
+
+using IGE.TankShooter.Entry.Stats;
 
 public class SimpleTextValueImplementation : ITextValue
 {
@@ -7,6 +8,6 @@ public class SimpleTextValueImplementation : ITextValue
 
   public SimpleTextValueImplementation(string value)
   {
-    this.Text = value;
+    Text = value;
   }
 }

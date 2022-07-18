@@ -5,19 +5,21 @@ using System.Collections.Generic;
 
 using Core;
 
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-
-using MonoGame.Extended.Input;
 using GameObjects;
 
 using Graphics;
 
+using IGE.TankShooter.Entry.Core.StatsDisplay;
+using IGE.TankShooter.Entry.Core.StatsDisplay.Data;
+
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Input;
 using MonoGame.Extended.ViewportAdapters;
-using IGE.TankShooter.Entry.Stats;
 
 public class Game1 : Game
 {
@@ -26,12 +28,13 @@ public class Game1 : Game
   private Tank tank;
   private ISet<Bullet> Bullets = new HashSet<Bullet>();
   private ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
+  private CountdownTimer EnemySpawnTimer = new(3, 3, 10, true);
   private Texture2D BulletTexture;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
 
   private TextOverlay textOverlay;
+  private FrameRateCounter fpsCounter;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -45,6 +48,7 @@ public class Game1 : Game
   protected override void Initialize()
   {
     Background = new BackgroundMap(200, 200);
+    this.EnemySpawnTimer.CountdownTriggered += MaybeSpawnEnemy;
 
     var collisionBounds = Background.BoundingBox;
     collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
@@ -71,8 +75,10 @@ public class Game1 : Game
     this.textOverlay = new TextOverlay(this);
     this.textOverlay.Initialize();
 
-    this.textOverlay.Add(new SimpleTextValueImplementation("FPS: 59.7"));
-    this.textOverlay.Add(new SimpleTextValueImplementation("Score: 9001"));
+    this.fpsCounter = new FrameRateCounter();
+    this.fpsCounter.Initialize();
+
+    this.textOverlay.Add(fpsCounter);
 
     base.Initialize();
   }
@@ -91,8 +97,8 @@ public class Game1 : Game
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
+    this.EnemySpawnTimer.Update(gameTime);
     MaybeFireBullet();
-    MaybeSpawnEnemy(gameTime);
     TranslateCamera();
 
     this.tank.Update(gameTime);
@@ -152,22 +158,20 @@ public class Game1 : Game
 
   }
 
-  private void MaybeSpawnEnemy(GameTime gameTime)
+  private void MaybeSpawnEnemy(object sender, EventArgs args)
   {
-    if (this.EnemySpawnTimer.Update(gameTime))
-    {
-      // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
-      var distanceFromTank = new Random().NextSingle(50f, 75f);
-      var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      var enemy = new Enemy(spawnPosition, this.tank);
-      Enemies.Add(enemy);
-      CollisionComponent.Insert(enemy);
-    }
+    // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
+    var distanceFromTank = new Random().NextSingle(50f, 75f);
+    var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
+    var enemy = new Enemy(spawnPosition, this.tank);
+    Enemies.Add(enemy);
+    CollisionComponent.Insert(enemy);
   }
 
   protected override void Draw(GameTime gameTime)
   {
     GraphicsDevice.Clear(Color.Black);
+    this.fpsCounter.Update(gameTime);
 
     // See https://community.monogame.net/t/screen-tearing-with-monogame-extended-and-tiled/14757 for details of what
     // SamplerState.PointClamp does. It is to stop weird lines due to floating point weirdness between background tile

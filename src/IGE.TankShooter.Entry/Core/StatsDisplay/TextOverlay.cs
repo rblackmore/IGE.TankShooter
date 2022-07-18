@@ -1,9 +1,10 @@
-﻿namespace IGE.TankShooter.Entry.Stats;
+﻿namespace IGE.TankShooter.Entry.Core.StatsDisplay;
 
 using System.Collections.Generic;
 using System.Linq;
 
 using IGE.TankShooter.Entry.Core;
+using IGE.TankShooter.Entry.Stats;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -26,12 +27,12 @@ public class TextOverlay : GameObject
 
   public void Add(ITextValue newValue)
   {
-    this.values.Add(newValue);
+    values.Add(newValue);
   }
 
   public void Remove(ITextValue removeValue)
   {
-    this.values.Remove(removeValue);
+    values.Remove(removeValue);
   }
 
   public override void Initialize()
@@ -42,8 +43,8 @@ public class TextOverlay : GameObject
   public override void LoadContent()
   {
     base.LoadContent();
-    this.font = this.game.Content.Load<SpriteFont>("Fonts/Hack");
-    this.lineHeight = font.MeasureString("Hello, World!!!").Y;
+    font = game.Content.Load<SpriteFont>("Fonts/Hack");
+    lineHeight = font.MeasureString("Hello, World!!!").Y;
   }
 
   public override void Update(GameTime gameTime)
@@ -54,10 +55,10 @@ public class TextOverlay : GameObject
   {
     var lineNo = 0;
 
-    foreach (var textValue in this.values)
+    foreach (var textValue in values)
     {
-      var linePosition = position.SetY(position.Y + (lineHeight * lineNo));
-      spriteBatch.DrawString(this.font, textValue.Text, linePosition, Color.White);
+      var linePosition = position.SetY(position.Y + lineHeight * lineNo);
+      spriteBatch.DrawString(font, textValue.Text, linePosition, Color.White);
       lineNo++;
     }
   }
