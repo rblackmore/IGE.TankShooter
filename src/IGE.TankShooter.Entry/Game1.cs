@@ -1,4 +1,4 @@
-namespace IGE.TankShooter.Entry;
+﻿namespace IGE.TankShooter.Entry;
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
 using MonoGame.Extended.ViewportAdapters;
+using IGE.TankShooter.Entry.Stats;
 
 public class Game1 : Game
 {
@@ -29,6 +30,8 @@ public class Game1 : Game
   private Texture2D BulletTexture;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
+
+  private TextOverlay textOverlay;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -65,6 +68,13 @@ public class Game1 : Game
 
     this.Services.AddService(this.Camera);
 
+    this.textOverlay = new TextOverlay(this);
+    this.textOverlay.Initialize();
+
+    this.textOverlay.Add(new TextBlock { Text = "FPS: 59.7" });
+    this.textOverlay.Add(new TextBlock { Text = "Score: 9001" });
+    this.textOverlay.Add(new TextBlock { Text = "Enemies: 47" });
+
     base.Initialize();
   }
 
@@ -74,6 +84,7 @@ public class Game1 : Game
     this.tank.LoadContent();
     this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
     Background.LoadContent(Content, GraphicsDevice);
+    this.textOverlay.LoadContent();
   }
 
   protected override void Update(GameTime gameTime)
@@ -98,6 +109,8 @@ public class Game1 : Game
     }
     
     CollisionComponent.Update(gameTime);
+
+    this.textOverlay.Update(gameTime);
 
     base.Update(gameTime);
   }
@@ -177,6 +190,11 @@ public class Game1 : Game
     }
 
     this.spriteBatch.End();
+
+    this.spriteBatch.Begin();
+    this.textOverlay.Draw(gameTime, this.spriteBatch);
+    this.spriteBatch.End();
+
 
     base.Draw(gameTime);
   }

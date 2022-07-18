@@ -37,6 +37,13 @@
 /processorParam:TextureFormat=Color
 /build:bulletSand3_outline.png
 
+#begin Fonts/Hack.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Fonts/Hack.spritefont
+
 #begin tankBody_red_outline.png
 /importer:TextureImporter
 /processor:TextureProcessor
