@@ -16,6 +16,7 @@ using Graphics;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Sprites;
 using MonoGame.Extended.ViewportAdapters;
 
 public class Game1 : Game
@@ -25,10 +26,13 @@ public class Game1 : Game
   private Tank tank;
   private ISet<Bullet> Bullets = new HashSet<Bullet>();
   private ISet<Enemy> Enemies = new HashSet<Enemy>();
-  private CountdownTimer EnemySpawnTimer = new(3, 3, 10);
-  private Texture2D BulletTexture;
+  private CountdownTimer EnemySpawnTimer = new(1, 1f, 3f);
+  private Texture2D CrosshairTexture;
+  private Sprite CrosshairSprite;
+  private Texture2D[] EnemyPersonTextures;
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
+  private CameraOperator CameraOperator;
 
   public OrthographicCamera Camera { get; set; }
 
@@ -41,6 +45,7 @@ public class Game1 : Game
 
   protected override void Initialize()
   {
+    IsMouseVisible = false;
     Background = new BackgroundMap(200, 200);
 
     var collisionBounds = Background.BoundingBox;
@@ -60,8 +65,7 @@ public class Game1 : Game
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
-    var cameraCenter = Background.BoundingBox.Center;
-    this.Camera.Position = new Vector2(cameraCenter.X - 20f, cameraCenter.Y - 20f);
+    CameraOperator = new CameraOperator(this.tank, this.Camera);
 
     this.Services.AddService(this.Camera);
 
@@ -71,9 +75,21 @@ public class Game1 : Game
   protected override void LoadContent()
   {
     spriteBatch = new SpriteBatch(GraphicsDevice);
-    this.tank.LoadContent();
-    this.BulletTexture = Content.Load<Texture2D>("bulletSand3_outline");
+    this.tank.LoadContent(Content);
+    this.CrosshairTexture = Content.Load<Texture2D>("crosshair061");
+    this.CrosshairSprite = new Sprite(this.CrosshairTexture);
+    this.EnemyPersonTextures = new Texture2D[]
+    {
+      Content.Load<Texture2D>("enemy_person_a"),
+      Content.Load<Texture2D>("enemy_person_b"),
+      Content.Load<Texture2D>("enemy_person_c"),
+      Content.Load<Texture2D>("enemy_person_d"),
+    };
     Background.LoadContent(Content, GraphicsDevice);
+    
+    // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
+    // be calculated once we've loaded its textures and decided how much we need to scale them.
+    CameraOperator.CutTo(this.tank.CurrentPosition);
   }
 
   protected override void Update(GameTime gameTime)
@@ -83,9 +99,10 @@ public class Game1 : Game
 
     MaybeFireBullet();
     MaybeSpawnEnemy(gameTime);
-    TranslateCamera();
-
+    
     this.tank.Update(gameTime);
+    CameraOperator.Update(gameTime);
+
     
     foreach (var bullet in this.Bullets)
     {
@@ -106,48 +123,24 @@ public class Game1 : Game
   {
     if (MouseExtended.GetState().WasButtonJustDown(MouseButton.Left))
     {
-      var targetScreen = Mouse.GetState().Position;
-      var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
-      var bullet = new Bullet(this, BulletTexture, target, this.tank.CurrentPosition());
+      // If required, switch back to this to fire where the mouse is pointing, not where the turret is pushing.
+      // var targetScreen = Mouse.GetState().Position;
+      // var target = this.Camera.ScreenToWorld(targetScreen.X, targetScreen.Y);
+      var bullet = this.tank.FireBullet();
       Bullets.Add(bullet);
       CollisionComponent.Insert(bullet);
-
     }
-  }
-
-  private void TranslateCamera()
-  {
-    //TODO: Bad code is bad.
-    var direction = Vector2.Zero;
-
-    var kbState = KeyboardExtended.GetState();
-
-    if (kbState.IsKeyDown(Keys.Up))
-      direction -= Vector2.UnitY;
-    if (kbState.IsKeyDown(Keys.Down))
-      direction += Vector2.UnitY;
-    if (kbState.IsKeyDown(Keys.Left))
-      direction -= Vector2.UnitX;
-    if (kbState.IsKeyDown(Keys.Right))
-      direction += Vector2.UnitX;
-
-    this.Camera.Move(direction);
-
-    if (kbState.WasKeyJustDown(Keys.O))
-      this.Camera.Zoom -= 0.1f;
-    if (kbState.WasKeyJustDown(Keys.L))
-      this.Camera.Zoom += 0.1f;
-
   }
 
   private void MaybeSpawnEnemy(GameTime gameTime)
   {
     if (this.EnemySpawnTimer.Update(gameTime))
     {
+      var random = new Random();
       // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
-      var distanceFromTank = new Random().NextSingle(50f, 75f);
-      var spawnPosition = this.tank.CurrentPosition() + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      var enemy = new Enemy(spawnPosition, this.tank);
+      var distanceFromTank = random.NextSingle(50f, 75f);
+      var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
+      var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
       Enemies.Add(enemy);
       CollisionComponent.Insert(enemy);
     }
@@ -176,9 +169,18 @@ public class Game1 : Game
       enemy.Draw(gameTime, spriteBatch);
     }
 
+    // Always draw last so as to not obscure.
+    this.DrawCursor();
     this.spriteBatch.End();
 
     base.Draw(gameTime);
+  }
+
+  private void DrawCursor()
+  {
+    var mousePosition = this.Camera.ScreenToWorld(Mouse.GetState().Position.ToVector2());
+    var scale = 2f / CrosshairTexture.Width;
+    this.spriteBatch.Draw(CrosshairSprite, mousePosition, 0f, new Vector2(scale));
   }
 
   public void RemoveBullet(Bullet bullet)

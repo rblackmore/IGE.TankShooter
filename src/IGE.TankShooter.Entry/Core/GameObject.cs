@@ -1,6 +1,7 @@
 ﻿namespace IGE.TankShooter.Entry.Core;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 public abstract class GameObject
@@ -10,7 +11,7 @@ public abstract class GameObject
     
   }
 
-  public virtual void LoadContent()
+  public virtual void LoadContent(ContentManager content)
   {
     
   }

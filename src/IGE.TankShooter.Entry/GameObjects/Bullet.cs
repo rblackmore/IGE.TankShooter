@@ -1,7 +1,5 @@
 ﻿namespace IGE.TankShooter.Entry.GameObjects;
 
-using System;
-
 using Core;
 
 using Microsoft.Xna.Framework;
@@ -18,19 +16,26 @@ public class Bullet : GameObject, ICollisionActor
   private readonly Game1 tankGame;
   public IShapeF Bounds { get; }
   private Vector2 Velocity { get; }
-  private Sprite Sprite;
+  private readonly Sprite Sprite;
+  private readonly Vector2 SpriteScale;
   
-  public Bullet(Game1 game, Texture2D texture, Vector2 targetPosition, Vector2 initialPosition)
+  public Bullet(Game1 game, Sprite sprite, Vector2 spriteScale, Vector2 direction, Vector2 initialPosition)
   {
     this.Bounds = new CircleF(initialPosition.ToPoint(), 0.15f);
-    this.Velocity = (targetPosition - initialPosition).NormalizedCopy() * SPEED;
+    this.Velocity = direction.NormalizedCopy() * SPEED;
     this.tankGame = game;
-    this.Sprite = new Sprite(texture);
+    this.Sprite = sprite;
+    this.SpriteScale = spriteScale;
   }
 
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
-    Sprite.Draw(spriteBatch, this.Bounds.Position, Velocity.ToAngle(), new Vector2(0.05f));
+    Sprite.Draw(spriteBatch, this.Bounds.Position, Velocity.ToAngle(), SpriteScale);
+
+    if (Debug.DrawDebugLines)
+    {
+      spriteBatch.DrawCircle((CircleF)this.Bounds, 20, Color.Yellow);
+    }
   }
 
   public override void Update(GameTime gameTime)
@@ -43,7 +48,6 @@ public class Bullet : GameObject, ICollisionActor
     if (collisionInfo.Other is Enemy enemy)
     {
       this.tankGame.OnEnemyHit(this, enemy);
-    
     }
   }
 }
