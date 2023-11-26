@@ -9,11 +9,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 using MonoGame.Extended;
+using MonoGame.Extended.Collisions;
 using MonoGame.Extended.Input;
 using MonoGame.Extended.Sprites;
 
-public class Tank : GameObject
+public class Tank : GameObject, ICollisionActor
 {
+  private Game1 tankGame;
   private Turret Turret;
   
   private Sprite Sprite;
@@ -26,11 +28,14 @@ public class Tank : GameObject
 
   private MovementVelocity velocity;
   private readonly Point2 initialPosition;
+  private CircleF bounds;
 
   public Tank(Game1 tankGame, Point2 initialPosition)
   {
+    this.tankGame = tankGame;
     this.initialPosition = initialPosition;
     this.Turret = new Turret(tankGame, this, new Vector2(0f, 0.75f));
+    bounds = new CircleF(initialPosition, 1);
   }
 
   public Vector2 CurrentPosition => Transform.Position;
@@ -59,6 +64,7 @@ public class Tank : GameObject
 
     this.Sprite = new Sprite(texture);
     this.Transform = new Transform2(new Vector2(initialPosition.X, initialPosition.Y), 0.0f, new Vector2(spriteScale));
+    this.bounds.Radius = 3f;
    
     this.Turret.LoadContent(content, this.Transform.Position, this.Transform.Rotation, spriteScale);
   }
@@ -67,6 +73,7 @@ public class Tank : GameObject
   {
     this.MoveTank(gameTime);
     this.Turret.Update(gameTime);
+    this.bounds.Position = this.Transform.Position;
   }
 
   private void RotateTankBodyTo(GameTime gameTime)
@@ -119,6 +126,12 @@ public class Tank : GameObject
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
     spriteBatch.Draw(Sprite, Transform);
+
+    if (Debug.DrawDebugLines)
+    {
+      spriteBatch.DrawCircle(this.bounds, 15, Color.Cyan, 0.1f);
+    }
+    
     this.Turret.Draw(gameTime, spriteBatch);
   }
 
@@ -126,6 +139,16 @@ public class Tank : GameObject
   {
     return this.Turret.FireBullet();
   }
+
+  public void OnCollision(CollisionEventArgs collisionInfo)
+  {
+    if (collisionInfo.Other is Enemy enemy)
+    {
+      this.tankGame.OnPlayerHit(enemy);
+    }
+  }
+
+  public IShapeF Bounds { get { return bounds; } }
 }
 
 class Turret : GameObject
