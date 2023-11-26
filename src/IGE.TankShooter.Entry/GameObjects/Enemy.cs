@@ -46,6 +46,12 @@ public class Enemy : GameObject, ICollisionActor
   public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
   {
     spriteBatch.Draw(Sprite, this.Bounds.Position, this.Direction.ToAngle() + (float)Math.PI / 2f, new Vector2(SIZE / Texture.Width));
+
+    if (Debug.DrawDebugLines)
+    {
+      spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.Red, 0.2f);
+      spriteBatch.DrawLine(this.Bounds.Position, this.Bounds.Position + (this.Direction * 5), Color.Red, 0.2f);
+    }
   }
 
   public void OnCollision(CollisionEventArgs collisionInfo)

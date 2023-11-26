@@ -140,6 +140,8 @@ public class Tank : GameObject, ICollisionActor
     if (Debug.DrawDebugLines)
     {
       spriteBatch.DrawCircle(this.bounds, 15, Color.Cyan, 0.1f);
+      spriteBatch.DrawLine(CurrentPosition, CurrentPosition + velocity.TargetDirection * 10, Color.Cyan, 0.2f);
+      spriteBatch.DrawLine(CurrentPosition, CurrentPosition + (velocity.Direction).NormalizedCopy() * 10, Color.LightCyan, 0.2f);
     }
     
     this.Turret.Draw(gameTime, spriteBatch);
@@ -208,6 +210,7 @@ class Turret : GameObject
     
     var bulletTexture = content.Load<Texture2D>("bulletSand3_outline");
     this.BulletSprite = new Sprite(bulletTexture);
+    this.BulletSprite.Origin = new Vector2(bulletTexture.Width / 2f, bulletTexture.Height / 2f);
   }
 
   /// <summary>
@@ -278,7 +281,7 @@ class Turret : GameObject
 
     if (Debug.DrawDebugLines)
     {
-      spriteBatch.DrawCircle(this.CurrentBarrelTipPosition, 0.2f, 20, Color.Cyan);
+      spriteBatch.DrawCircle(this.CurrentBarrelTipPosition, 0.5f, 8, Color.Cyan, 0.1f);
     }
   }
 
