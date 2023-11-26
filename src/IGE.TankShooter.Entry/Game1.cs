@@ -34,6 +34,9 @@ public class Game1 : Game
   private CollisionComponent CollisionComponent;
   private CameraOperator CameraOperator;
 
+  private int EnemiesRemaining = 5;
+  private int Points = 0;
+
   public OrthographicCamera Camera { get; set; }
 
   public Game1()
@@ -59,6 +62,8 @@ public class Game1 : Game
     
     this.tank = new Tank(this, this.Background.BoundingBox.Center);
     this.tank.Initialize();
+    
+    CollisionComponent.Insert(this.tank);
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
 
@@ -134,16 +139,19 @@ public class Game1 : Game
 
   private void MaybeSpawnEnemy(GameTime gameTime)
   {
-    if (this.EnemySpawnTimer.Update(gameTime))
+    if (EnemiesRemaining <= 0 || !this.EnemySpawnTimer.Update(gameTime))
     {
-      var random = new Random();
-      // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
-      var distanceFromTank = random.NextSingle(50f, 75f);
-      var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-      var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
-      Enemies.Add(enemy);
-      CollisionComponent.Insert(enemy);
+      return;
     }
+    
+    var random = new Random();
+    // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
+    var distanceFromTank = random.NextSingle(50f, 75f);
+    var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
+    var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
+    Enemies.Add(enemy);
+    CollisionComponent.Insert(enemy);
+    EnemiesRemaining--;
   }
 
   protected override void Draw(GameTime gameTime)
@@ -196,5 +204,18 @@ public class Game1 : Game
     CollisionComponent.Remove(enemy);
     
     RemoveBullet(bullet);
+    Points += 1000;
+
+    if (Enemies.Count == 0)
+    {
+      Console.WriteLine("All enemies dead");
+    }
   }
+
+  public void OnPlayerHit(Enemy enemy)
+  {
+    Enemies.Remove(enemy);
+    CollisionComponent.Remove(enemy);
+  }
+  
 }

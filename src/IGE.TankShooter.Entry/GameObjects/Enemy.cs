@@ -50,7 +50,6 @@ public class Enemy : GameObject, ICollisionActor
 
   public void OnCollision(CollisionEventArgs collisionInfo)
   {
-    
   }
 
   public IShapeF Bounds { get; }
