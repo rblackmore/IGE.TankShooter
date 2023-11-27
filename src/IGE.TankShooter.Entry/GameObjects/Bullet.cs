@@ -19,8 +19,12 @@ public class Bullet : GameObject, ICollisionActor
   private readonly Sprite Sprite;
   private readonly Vector2 SpriteScale;
   
+  // Only kept for help with debugging.
+  private readonly Vector2 initialPosition;
+  
   public Bullet(Game1 game, Sprite sprite, Vector2 spriteScale, Vector2 direction, Vector2 initialPosition)
   {
+    this.initialPosition = initialPosition;
     this.Bounds = new CircleF(initialPosition.ToPoint(), 0.15f);
     this.Velocity = direction.NormalizedCopy() * SPEED;
     this.tankGame = game;
@@ -34,7 +38,8 @@ public class Bullet : GameObject, ICollisionActor
 
     if (Debug.DrawDebugLines)
     {
-      spriteBatch.DrawCircle((CircleF)this.Bounds, 20, Color.Yellow);
+      spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.Yellow, 0.2f);
+      spriteBatch.DrawLine(this.initialPosition, this.initialPosition + this.Velocity, Color.Yellow, 0.2f);
     }
   }
 

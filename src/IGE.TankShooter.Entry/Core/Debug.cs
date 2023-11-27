@@ -6,5 +6,5 @@ public class Debug
   /// Helper method to draw additional debug information over game objects.
   /// Up to individual game objects to decide what to do with this information.
   /// </summary>
-  public const bool DrawDebugLines = false;
+  public const bool DrawDebugLines = true;
 }

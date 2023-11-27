@@ -21,7 +21,7 @@ public class Tank : GameObject, ICollisionActor
   private Sprite Sprite;
   private Transform2 Transform;
 
-  private const float MAX_DIRECTION_CHANGE_RATE = MathF.PI / 3; // Radians per second.
+  private const float MAX_DIRECTION_CHANGE_RATE = MathF.PI; // Radians per second.
   public const float ACCELERATION = 5.0f; // Units per second.
   public const float MIN_SPEED = 0.0f; // Units per second.
   public const float MAX_SPEED = 10.0f; // Units per second.
@@ -85,8 +85,13 @@ public class Tank : GameObject, ICollisionActor
   {
     var deltaTime = gameTime.GetElapsedSeconds();
 
+    // Make sure to normalize this desired direction, otherwise if we interpolate between
+    // "almost up but a bit to the right" and "directly down", then while the vertical component
+    // of the vector will smoothly interpolate from up to down, the horizontal component
+    // is only minuscule, meaning the tank will instantly flip from one direction to the other
+    // during the interpolation. This normalisation results in the tank having to travel via a wide arc.
     this.velocity.Direction =
-      Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE);
+      Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE).NormalizedCopy();
   }
 
   private void MoveTank(GameTime gameTime)
@@ -108,8 +113,13 @@ public class Tank : GameObject, ICollisionActor
 
     if (targetDirection != Vector2.Zero)
     {
+      // While I don't believe this normalisation is strictly necessary, it makes the debug
+      // drawing look better, because the line pointing "up and right" is now the same length
+      // as the line pointing "right" which feels better.
+      targetDirection.Normalize();
+      
       this.velocity.IncreaseVelocity(gameTime);
-      this.velocity.TargetDirection = targetDirection; // TODO: Direction should slowly rotate toward target.
+      this.velocity.TargetDirection = targetDirection;
     }
     else
     {
@@ -130,6 +140,8 @@ public class Tank : GameObject, ICollisionActor
     if (Debug.DrawDebugLines)
     {
       spriteBatch.DrawCircle(this.bounds, 15, Color.Cyan, 0.1f);
+      spriteBatch.DrawLine(CurrentPosition, CurrentPosition + velocity.TargetDirection * 10, Color.Cyan, 0.2f);
+      spriteBatch.DrawLine(CurrentPosition, CurrentPosition + (velocity.Direction).NormalizedCopy() * 10, Color.LightCyan, 0.2f);
     }
     
     this.Turret.Draw(gameTime, spriteBatch);
@@ -198,6 +210,7 @@ class Turret : GameObject
     
     var bulletTexture = content.Load<Texture2D>("bulletSand3_outline");
     this.BulletSprite = new Sprite(bulletTexture);
+    this.BulletSprite.Origin = new Vector2(bulletTexture.Width / 2f, bulletTexture.Height / 2f);
   }
 
   /// <summary>
@@ -268,7 +281,7 @@ class Turret : GameObject
 
     if (Debug.DrawDebugLines)
     {
-      spriteBatch.DrawCircle(this.CurrentBarrelTipPosition, 0.2f, 20, Color.Cyan);
+      spriteBatch.DrawCircle(this.CurrentBarrelTipPosition, 0.5f, 8, Color.Cyan, 0.1f);
     }
   }
 
