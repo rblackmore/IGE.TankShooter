@@ -31,14 +31,6 @@ public class BackgroundMap
 
   public RectangleF BoundingBox { get; }
 
-  private static readonly ushort[] BackgroundTileIndices = { 0, 1 };
-  private static readonly ushort[] DecorativeTileIndices = {
-    55, 56, 57, 58, 59, 60,
-    73, 74, 75, 76, 77, 78,
-    91, 92, 93, 94, 95, 96,
-    99, 100, 103, 104,
-  };
-
   private readonly int NumTilesWide;
   private readonly int NumTilesHigh;
   private readonly float Scale;
@@ -56,30 +48,7 @@ public class BackgroundMap
 
   public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
   {
-    Map = new TiledMap("background", NumTilesWide, NumTilesHigh, TileWidth, TileHeight, TiledMapTileDrawOrder.LeftDown, TiledMapOrientation.Orthogonal);
-    var tileSetTexture = content.Load<Texture2D>("background_tiles");
-    var tileSet = new TiledMapTileset(tileSetTexture, TileWidth, TileHeight, TileRows * TileCols, 0, 0, TileCols);
-    Map.AddTileset(tileSet, GlobalIdentifier);
-
-    var baseLayer = new TiledMapTileLayer("base", NumTilesWide, NumTilesHigh, TileWidth, TileHeight);
-    var decorativeLayer = new TiledMapTileLayer("flourishes", NumTilesWide, NumTilesHigh, TileWidth, TileHeight);
-
-    var rand = new Random();
-    for (ushort x = 0; x < NumTilesWide; x++)
-    {
-      for (ushort y = 0; y < NumTilesHigh; y++)
-      {
-        baseLayer.SetTile(x, y, BackgroundTileIndices[rand.Next(0, BackgroundTileIndices.Length)]);
-        if (rand.NextSingle() < PercentageOfDecoratedTiles)
-        {
-          decorativeLayer.SetTile(x, y, DecorativeTileIndices[rand.Next(0, DecorativeTileIndices.Length)]);
-        }
-      }
-    }
-    
-    Map.AddLayer(baseLayer);
-    Map.AddLayer(decorativeLayer);
-    
+    Map = content.Load<TiledMap>("Maps/level1");
     Renderer = new TiledMapRenderer(graphicsDevice, Map);
   }
 

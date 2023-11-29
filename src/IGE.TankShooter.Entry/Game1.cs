@@ -99,6 +99,9 @@ public class Game1 : Game
 
   protected override void Update(GameTime gameTime)
   {
+    KeyboardExtended.Refresh();
+    MouseExtended.Refresh();
+    
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
