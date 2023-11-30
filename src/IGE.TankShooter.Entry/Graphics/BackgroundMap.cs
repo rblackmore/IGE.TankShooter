@@ -98,6 +98,7 @@ public class BackgroundMap
     _texture = new RenderTarget2D(graphicsDevice, _map.WidthInPixels, _map.HeightInPixels);
     _sprite = new Sprite(_texture) { OriginNormalized = new Vector2(0f, 0f) };
     graphicsDevice.SetRenderTarget(_texture);
+    graphicsDevice.BlendState = BlendState.AlphaBlend;
     graphicsDevice.Clear(Color.Black);
     renderer.Draw();
     graphicsDevice.SetRenderTarget(null);
