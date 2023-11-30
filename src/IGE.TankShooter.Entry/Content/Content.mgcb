@@ -10,6 +10,7 @@
 
 #-------------------------------- References --------------------------------#
 
+/reference:../../../.nuget/packages/monogame.extended.content.pipeline/3.9.0-alpha0093/tools/MonoGame.Extended.Content.Pipeline.dll
 
 #---------------------------------- Content ---------------------------------#
 
@@ -96,6 +97,11 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:enemy_person_d.png
+
+#begin Maps/level1.tmx
+/importer:TiledMapImporter
+/processor:TiledMapProcessor
+/build:Maps/level1.tmx
 
 #begin tankBody_red_outline.png
 /importer:TextureImporter

@@ -49,20 +49,26 @@ public class Game1 : Game
   protected override void Initialize()
   {
     IsMouseVisible = false;
-    Background = new BackgroundMap(200, 200);
-
+    Background = new BackgroundMap(this);
+    
+    // Although this should really be invoked from the "LoadContent()" method of this class, but it causes all sorts
+    // of race-like conditions because we really do need to know the size of the map before doing things like:
+    //  * Centering the tank.
+    //  * Initialising the collision system (it needs to know the bounds of the world during construction)
+    //  * Creating the edge of the world collision objects.
+    Background.LoadContent(Content, GraphicsDevice);
+    
     var collisionBounds = Background.BoundingBox;
     collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
     CollisionComponent = new CollisionComponent(collisionBounds);
     
-    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Bottom, Background.BoundingBox));
-    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Top, Background.BoundingBox));
-    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Left, Background.BoundingBox));
-    CollisionComponent.Insert(new EdgeOfTheWorld(this, EdgeOfTheWorld.Side.Right, Background.BoundingBox));
+    foreach (var target in Background.GetCollisionTargets())
+    {
+      CollisionComponent.Insert(target);
+    }
     
     this.tank = new Tank(this, this.Background.BoundingBox.Center);
     this.tank.Initialize();
-    
     CollisionComponent.Insert(this.tank);
 
     var ratio = this.graphics.PreferredBackBufferWidth / 100;
@@ -90,7 +96,6 @@ public class Game1 : Game
       Content.Load<Texture2D>("enemy_person_c"),
       Content.Load<Texture2D>("enemy_person_d"),
     };
-    Background.LoadContent(Content, GraphicsDevice);
     
     // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
     // be calculated once we've loaded its textures and decided how much we need to scale them.
@@ -99,6 +104,9 @@ public class Game1 : Game
 
   protected override void Update(GameTime gameTime)
   {
+    KeyboardExtended.Refresh();
+    MouseExtended.Refresh();
+    
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
@@ -161,9 +169,9 @@ public class Game1 : Game
     // See https://community.monogame.net/t/screen-tearing-with-monogame-extended-and-tiled/14757 for details of what
     // SamplerState.PointClamp does. It is to stop weird lines due to floating point weirdness between background tile
     // rows when zooming.
-    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp);
+    this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp, blendState:BlendState.AlphaBlend);
     
-    this.Background.Draw(Camera);
+    this.Background.Draw(spriteBatch);
 
     this.tank.Draw(gameTime, spriteBatch);
 

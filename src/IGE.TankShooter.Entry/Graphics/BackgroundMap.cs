@@ -1,93 +1,116 @@
 ﻿namespace IGE.TankShooter.Entry.Graphics;
 
 using System;
+using System.Collections.Generic;
+
+using Core;
+
+using GameObjects;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
+using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Sprites;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
 
+using Vector2 = Microsoft.Xna.Framework.Vector2;
+
 /// <summary>
-/// Randomly generate a map of a particular size.
-/// Will generate a background layer, then add another layer on top with some flourishes to lighten up the scenery.
+/// Draw a predefined tile map to the screen. The tilemap starts at (0, 0), is made up of 16px by 16px tiles, and
+/// each tile is TileWidthWorldUnits wide in world units.
+///
+/// This is also responsible for returning a collection of ICollisionActors representing "the edge of the world".
+/// In the future, it will also include collision actors for each of the entities defined as collidable via the
+/// map editor (the Tiled map editor supports the notion of collision boundaries for tiles).
+/// 
+/// Each map could be a different size, so we expose the size in world units and in screen coordinates for the
+/// game to be able to setup other aspects
+///
+/// While the MonoGame.Extended.Tiled library is perfectly capable of drawing tiles directly to the buffer, and
+/// and indeed it will be performant as it only draws the tiles in view, this approach is not used. Instead, we
+/// first render the entire map to a texture during LoadContent() and render that texture during Draw().
+/// This is because the way in which we smoothly zoom in-and-out with the speed of the tank causes floating point
+/// rounding errors and thus the tiles end up with black lines between rows and/or columns. By first rendering to
+/// a texture then letting that texture get rendered, we alleviate these issues.
 /// </summary>
 public class BackgroundMap
 {
 
-  private TiledMap Map;
-  private TiledMapRenderer Renderer;
-  
-  private const float TileWidthWorldUnits = 3f;
-  private const int TileWidth = 64;
-  private const int TileHeight = 64;
-  private const int TileRows = 7;
-  private const int TileCols = 18;
-  private const float PercentageOfDecoratedTiles = 0.05f;
+  private TiledMap _map;
+  private RenderTarget2D _texture;
+  private Sprite _sprite;
 
-  private const int GlobalIdentifier = 0;
+  private const float TileWidthWorldUnits = 2f;
+  private const float TileSize = 16;
 
-  public RectangleF BoundingBox { get; }
+  private readonly Transform2 _transform;
+  private readonly Game1 _game;
 
-  private static readonly ushort[] BackgroundTileIndices = { 0, 1 };
-  private static readonly ushort[] DecorativeTileIndices = {
-    55, 56, 57, 58, 59, 60,
-    73, 74, 75, 76, 77, 78,
-    91, 92, 93, 94, 95, 96,
-    99, 100, 103, 104,
-  };
-
-  private readonly int NumTilesWide;
-  private readonly int NumTilesHigh;
-  private readonly float Scale;
-  private readonly Matrix ScaleMatrix;
-
-  public BackgroundMap(float widthInWorldUnits, float heightInWorldUnits)
+  public BackgroundMap(Game1 game)
   {
-    this.Scale = TileWidthWorldUnits / TileWidth;
-    this.ScaleMatrix = Matrix.CreateScale(this.Scale);
-    this.NumTilesWide = (int)((widthInWorldUnits / this.Scale) / TileWidth);
-    this.NumTilesHigh = (int)((heightInWorldUnits / this.Scale) / TileHeight);
+    this._game = game;
+    
+    const float scale = TileWidthWorldUnits / TileSize;
+    _transform = new Transform2(Vector2.Zero, 0f, new Vector2(scale, scale));
+  }
 
-    this.BoundingBox = new RectangleF(0f, 0f, widthInWorldUnits, heightInWorldUnits);
+  private RectangleF _boundingBox;
+
+  public RectangleF BoundingBox
+  {
+    get
+    {
+      if (_map == null)
+      {
+        throw new Exception(
+          "Attempting to access bounding box of BackgroundMap prior to the LoadContent() method being called. Must wait for this so that the size can be derived from the tile map."
+          );
+      }
+
+      return _boundingBox;
+    }
+  }
+
+  public List<ICollisionActor> GetCollisionTargets()
+  {
+    var targets = new List<ICollisionActor>(4)
+    {
+      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Bottom, BoundingBox),
+      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Top, BoundingBox),
+      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Left, BoundingBox),
+      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Right, BoundingBox)
+    };
+
+    return targets;
   }
 
   public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
   {
-    Map = new TiledMap("background", NumTilesWide, NumTilesHigh, TileWidth, TileHeight, TiledMapTileDrawOrder.LeftDown, TiledMapOrientation.Orthogonal);
-    var tileSetTexture = content.Load<Texture2D>("background_tiles");
-    var tileSet = new TiledMapTileset(tileSetTexture, TileWidth, TileHeight, TileRows * TileCols, 0, 0, TileCols);
-    Map.AddTileset(tileSet, GlobalIdentifier);
-
-    var baseLayer = new TiledMapTileLayer("base", NumTilesWide, NumTilesHigh, TileWidth, TileHeight);
-    var decorativeLayer = new TiledMapTileLayer("flourishes", NumTilesWide, NumTilesHigh, TileWidth, TileHeight);
-
-    var rand = new Random();
-    for (ushort x = 0; x < NumTilesWide; x++)
-    {
-      for (ushort y = 0; y < NumTilesHigh; y++)
-      {
-        baseLayer.SetTile(x, y, BackgroundTileIndices[rand.Next(0, BackgroundTileIndices.Length)]);
-        if (rand.NextSingle() < PercentageOfDecoratedTiles)
-        {
-          decorativeLayer.SetTile(x, y, DecorativeTileIndices[rand.Next(0, DecorativeTileIndices.Length)]);
-        }
-      }
-    }
+    _map = content.Load<TiledMap>("Maps/level1");
+    _boundingBox = new RectangleF(0f, 0f, _map.Width * TileWidthWorldUnits, _map.Height * TileWidthWorldUnits);
     
-    Map.AddLayer(baseLayer);
-    Map.AddLayer(decorativeLayer);
-    
-    Renderer = new TiledMapRenderer(graphicsDevice, Map);
+    TiledMapRenderer renderer = new TiledMapRenderer(graphicsDevice, _map);
+
+    _texture = new RenderTarget2D(graphicsDevice, _map.WidthInPixels, _map.HeightInPixels);
+    _sprite = new Sprite(_texture) { OriginNormalized = new Vector2(0f, 0f) };
+    graphicsDevice.SetRenderTarget(_texture);
+    graphicsDevice.BlendState = BlendState.AlphaBlend;
+    graphicsDevice.Clear(Color.Black);
+    renderer.Draw();
+    graphicsDevice.SetRenderTarget(null);
   }
 
-  public void Draw(OrthographicCamera camera)
+  public void Draw(SpriteBatch spriteBatch)
   {
-    // The tiles are 64px (TileWidth) in screen coordinates, but we want them to render in a scale that is world
-    // coordinates and sizes, therefore create a scaling matrix. Multiply it by the view matrix to ensure that we
-    // respect zoom/translate of the camera in addition to the scale.
-    Renderer.Draw(ScaleMatrix * camera.GetViewMatrix());
+    spriteBatch.Draw(_sprite, _transform);
+
+    if (Debug.DrawDebugLines)
+    {
+      spriteBatch.DrawRectangle(BoundingBox, Color.Blue, 0.2f);
+    }
   }
 }
