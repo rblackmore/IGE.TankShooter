@@ -27,10 +27,22 @@ public class EdgeOfTheWorld: ICollisionActor
   public EdgeOfTheWorld(Game1 tankGame, Side side, RectangleF worldBounds)
   {
     this.tankGame = tankGame;
+    
+    /*
+     +---+-------------+---+
+     |   |    Top      |   |
+     |   +-------------+   +
+     |   |             |   |
+     | L |             | R |
+     |   |             |   |
+     |   +-------------+   +
+     |   |   Bottom    |   |
+     +---+-------------+---+
+     */
     Bounds = side switch
     {
-      Side.Top => new RectangleF(worldBounds.Left - BufferSize, worldBounds.Top - BufferSize, worldBounds.Width + BufferSize * 2, BufferSize),
-      Side.Bottom => new RectangleF(worldBounds.Left - BufferSize, worldBounds.Bottom, worldBounds.Width + BufferSize * 2, BufferSize),
+      Side.Top => new RectangleF(worldBounds.Left, worldBounds.Top - BufferSize, worldBounds.Width, BufferSize),
+      Side.Bottom => new RectangleF(worldBounds.Left, worldBounds.Bottom, worldBounds.Width, BufferSize),
       Side.Left => new RectangleF(worldBounds.Left - BufferSize, worldBounds.Top - BufferSize, BufferSize, worldBounds.Height + BufferSize * 2),
       Side.Right => new RectangleF(worldBounds.Right, worldBounds.Top - BufferSize, BufferSize, worldBounds.Height + BufferSize * 2),
       _ => throw new Exception("Unsupported side: " + side)
