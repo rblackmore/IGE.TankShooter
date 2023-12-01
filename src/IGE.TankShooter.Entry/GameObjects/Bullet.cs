@@ -54,7 +54,7 @@ public class Bullet : GameObject, ICollisionActor
     {
       this.tankGame.OnEnemyHit(this, enemy);
     }
-    else if (collisionInfo.Other is EdgeOfTheWorld)
+    else if (collisionInfo.Other is MapObject or EdgeOfTheWorld)
     {
       this.tankGame.RemoveBullet(this);
     }
