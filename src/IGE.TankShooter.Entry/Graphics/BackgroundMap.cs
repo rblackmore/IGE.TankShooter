@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Core;
 
@@ -64,19 +65,24 @@ public class BackgroundMap
   {
     get
     {
-      if (_map == null)
-      {
-        throw new Exception(
-          "Attempting to access bounding box of BackgroundMap prior to the LoadContent() method being called. Must wait for this so that the size can be derived from the tile map."
-          );
-      }
-
+      EnsureMapIsLoaded();
       return _boundingBox;
     }
   }
 
+  private void EnsureMapIsLoaded()
+  {
+      if (_map == null)
+      {
+        throw new Exception("Attempting to access prior to the LoadContent() method being called.");
+      }
+  }
+
+  private List<MapObject> MapObjects = new List<MapObject>();
+
   public List<ICollisionActor> GetCollisionTargets()
   {
+    EnsureMapIsLoaded();
     var targets = new List<ICollisionActor>(4)
     {
       new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Bottom, BoundingBox),
@@ -84,6 +90,40 @@ public class BackgroundMap
       new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Left, BoundingBox),
       new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Right, BoundingBox)
     };
+
+    // TODO: API still seems a bit lacking: https://community.monogame.net/t/getting-tile-properties-from-tiledmaptile/8858/6
+    // TODO: But essentially for each tile, we loop over all tilesets and their respective tiles until we find the
+    // TODO: one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
+    // TODO: At least we only need to do it once for now.
+
+    MapObjects.Clear();
+    foreach (var layer in _map.TileLayers)
+    {
+      foreach (var tile in layer.Tiles)
+      {
+        if (!tile.IsBlank)
+        {
+          // Oh wow, this is all a little crazy.
+          // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
+          // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
+          // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
+          // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
+          // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
+          // them to find out what their index is.
+          var tileset = _map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
+          var tilesetFirstIdentifier = _map.GetTilesetFirstGlobalIdentifier(tileset);
+          var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
+          var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
+          
+          if (tilesetTile != null && tilesetTile.Objects.Count > 0)
+          {
+            var mapObject = new MapObject(_map, tile, tilesetTile, _transform.Scale);
+            MapObjects.Add(mapObject);
+            targets.Add(mapObject);
+          }
+        }
+      }
+    }
 
     return targets;
   }
@@ -111,6 +151,10 @@ public class BackgroundMap
     if (Debug.DrawDebugLines)
     {
       spriteBatch.DrawRectangle(BoundingBox, Color.Blue, 0.2f);
+      foreach (var mapObj in MapObjects)
+      {
+        spriteBatch.DrawRectangle((RectangleF)mapObj.Bounds, Color.Blue, 0.2f);
+      }
     }
   }
 }

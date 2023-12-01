@@ -36,7 +36,7 @@ public class Tank : GameObject, ICollisionActor
     this.tankGame = tankGame;
     this.initialPosition = initialPosition;
     this.Turret = new Turret(tankGame, this, new Vector2(0f, 0.75f));
-    bounds = new CircleF(initialPosition, 1);
+    bounds = new CircleF(initialPosition, 0.5f);
   }
 
   public Vector2 CurrentPosition => Transform.Position;
@@ -66,7 +66,7 @@ public class Tank : GameObject, ICollisionActor
 
     this.Sprite = new Sprite(texture);
     this.Transform = new Transform2(new Vector2(initialPosition.X, initialPosition.Y), 0.0f, new Vector2(spriteScale));
-    this.bounds.Radius = 3f;
+    this.bounds.Radius = 1.5f;
    
     this.Turret.LoadContent(content, this.Transform.Position, this.Transform.Rotation, spriteScale);
   }
