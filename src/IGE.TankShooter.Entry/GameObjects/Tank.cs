@@ -22,7 +22,8 @@ public class Tank : GameObject, ICollisionActor
   private Transform2 Transform;
 
   private const float MAX_DIRECTION_CHANGE_RATE = MathF.PI; // Radians per second.
-  public const float ACCELERATION = 5.0f; // Units per second.
+  public const float ACCELERATION = 10.0f; // Units per second.
+  public const float DECELERATION = 20.0f; // Units per second.
   public const float MIN_SPEED = 0.0f; // Units per second.
   public const float MAX_SPEED = 10.0f; // Units per second.
 
@@ -50,6 +51,7 @@ public class Tank : GameObject, ICollisionActor
     this.velocity.MaxVelocity = 10.0f;
     this.velocity.MinVelocity = -10.0f;
     this.velocity.Acceleration = ACCELERATION;
+    this.velocity.Deceleration = DECELERATION;
     base.Initialize();
   }
 
@@ -90,8 +92,10 @@ public class Tank : GameObject, ICollisionActor
     // of the vector will smoothly interpolate from up to down, the horizontal component
     // is only minuscule, meaning the tank will instantly flip from one direction to the other
     // during the interpolation. This normalisation results in the tank having to travel via a wide arc.
-    this.velocity.Direction =
-      Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE).NormalizedCopy();
+    if (this.velocity.Velocity > 1f) {
+      this.velocity.Direction =
+        Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE).NormalizedCopy();
+    }
   }
 
   private void MoveTank(GameTime gameTime)
