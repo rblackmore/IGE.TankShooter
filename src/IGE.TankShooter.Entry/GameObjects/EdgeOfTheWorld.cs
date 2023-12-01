@@ -39,10 +39,6 @@ public class EdgeOfTheWorld: ICollisionActor
   
   public void OnCollision(CollisionEventArgs collisionInfo)
   {
-    if (collisionInfo.Other is Bullet bullet)
-    {
-      this.tankGame.RemoveBullet(bullet);
-    }
   }
 
   public IShapeF Bounds { get; }

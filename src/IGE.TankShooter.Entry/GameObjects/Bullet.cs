@@ -38,8 +38,8 @@ public class Bullet : GameObject, ICollisionActor
 
     if (Debug.DrawDebugLines)
     {
-      spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.Yellow, 0.2f);
-      spriteBatch.DrawLine(this.initialPosition, this.initialPosition + this.Velocity, Color.Yellow, 0.2f);
+      spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.Black, 0.1f);
+      spriteBatch.DrawLine(this.initialPosition, this.initialPosition + this.Velocity, Color.Yellow, 0.1f);
     }
   }
 
@@ -53,6 +53,10 @@ public class Bullet : GameObject, ICollisionActor
     if (collisionInfo.Other is Enemy enemy)
     {
       this.tankGame.OnEnemyHit(this, enemy);
+    }
+    else if (collisionInfo.Other is EdgeOfTheWorld)
+    {
+      this.tankGame.RemoveBullet(this);
     }
   }
 }

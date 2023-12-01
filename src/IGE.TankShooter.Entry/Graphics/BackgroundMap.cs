@@ -78,54 +78,55 @@ public class BackgroundMap
       }
   }
 
-  private List<MapObject> MapObjects = new List<MapObject>();
+  private List<ICollisionActor> _collisionTargets = null;
 
   public List<ICollisionActor> GetCollisionTargets()
   {
-    EnsureMapIsLoaded();
-    var targets = new List<ICollisionActor>(4)
+    if (_collisionTargets == null)
     {
-      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Bottom, BoundingBox),
-      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Top, BoundingBox),
-      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Left, BoundingBox),
-      new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Right, BoundingBox)
-    };
-
-    // TODO: API still seems a bit lacking: https://community.monogame.net/t/getting-tile-properties-from-tiledmaptile/8858/6
-    // TODO: But essentially for each tile, we loop over all tilesets and their respective tiles until we find the
-    // TODO: one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
-    // TODO: At least we only need to do it once for now.
-
-    MapObjects.Clear();
-    foreach (var layer in _map.TileLayers)
-    {
-      foreach (var tile in layer.Tiles)
+      EnsureMapIsLoaded();
+      _collisionTargets = new List<ICollisionActor>()
       {
-        if (!tile.IsBlank)
+        new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Bottom, BoundingBox),
+        new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Top, BoundingBox),
+        new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Left, BoundingBox),
+        new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Right, BoundingBox)
+      };
+
+      // TODO: API still seems a bit lacking: https://community.monogame.net/t/getting-tile-properties-from-tiledmaptile/8858/6
+      // TODO: But essentially for each tile, we loop over all tilesets and their respective tiles until we find the
+      // TODO: one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
+      // TODO: At least we only need to do it once for now.
+
+      foreach (var layer in _map.TileLayers)
+      {
+        foreach (var tile in layer.Tiles)
         {
-          // Oh wow, this is all a little crazy.
-          // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
-          // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
-          // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
-          // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
-          // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
-          // them to find out what their index is.
-          var tileset = _map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
-          var tilesetFirstIdentifier = _map.GetTilesetFirstGlobalIdentifier(tileset);
-          var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
-          var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
-          
-          if (tilesetTile != null && tilesetTile.Objects.Count > 0)
+          if (!tile.IsBlank)
           {
-            var mapObject = new MapObject(_map, tile, tilesetTile, _transform.Scale);
-            MapObjects.Add(mapObject);
-            targets.Add(mapObject);
+            // Oh wow, this is all a little crazy.
+            // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
+            // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
+            // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
+            // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
+            // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
+            // them to find out what their index is.
+            var tileset = _map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
+            var tilesetFirstIdentifier = _map.GetTilesetFirstGlobalIdentifier(tileset);
+            var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
+            var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
+            
+            if (tilesetTile != null && tilesetTile.Objects.Count > 0)
+            {
+              var mapObject = new MapObject(_map, tile, tilesetTile, _transform.Scale);
+              _collisionTargets.Add(mapObject);
+            }
           }
         }
       }
     }
 
-    return targets;
+    return _collisionTargets;
   }
 
   public void LoadContent(ContentManager content, GraphicsDevice graphicsDevice)
@@ -150,10 +151,16 @@ public class BackgroundMap
 
     if (Debug.DrawDebugLines)
     {
-      spriteBatch.DrawRectangle(BoundingBox, Color.Blue, 0.2f);
-      foreach (var mapObj in MapObjects)
+      foreach (var target in GetCollisionTargets())
       {
-        spriteBatch.DrawRectangle((RectangleF)mapObj.Bounds, Color.Blue, 0.2f);
+        if (target.Bounds is RectangleF rect)
+        {
+          spriteBatch.DrawRectangle(rect, Color.Blue, 0.1f);
+        }
+        else if (target.Bounds is CircleF circle)
+        {
+          spriteBatch.DrawCircle(circle, 10, Color.Blue, 0.1f);
+        }
       }
     }
   }
