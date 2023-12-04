@@ -14,6 +14,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
+using MonoGame.Extended.Input.InputListeners;
 using MonoGame.Extended.Sprites;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
@@ -98,6 +99,7 @@ public class BackgroundMap
       // TODO: one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
       // TODO: At least we only need to do it once for now.
 
+      List<MapObject> mapObjects = new List<MapObject>();
       foreach (var layer in _map.TileLayers)
       {
         foreach (var tile in layer.Tiles)
@@ -119,11 +121,94 @@ public class BackgroundMap
             if (tilesetTile != null && tilesetTile.Objects.Count > 0)
             {
               var mapObject = new MapObject(_map, tile, tilesetTile, _transform.Scale);
-              _collisionTargets.Add(mapObject);
+              mapObjects.Add(mapObject);
             }
           }
         }
       }
+     
+      // In order to merge adjacent objects together, we need to sort them from top to bottom, left to right.
+      // This is because the merge algorithm below iterates over them assuming they are in this order, merging
+      // horizontally adjacent cells before then merging vertically adjacent ones.
+      
+      /*Note that instead of sorting here, we could instead (and perhaps *should* instead) ask each cell to iterate
+      over all other cells to look for merge candidates. */
+      mapObjects.Sort((m1, m2) =>
+      {
+        if (m1.Bounds is CircleF)
+        {
+          return 1;
+        }
+
+        if (m2.Bounds is CircleF)
+        {
+          return -1;
+        }
+
+        var r1 = (RectangleF)m1.Bounds;
+        var r2 = (RectangleF)m2.Bounds;
+       
+        if (Math.Abs(r1.Top - r2.Top) > 0.05)
+        {
+          return r1.Top.CompareTo(r2.Top);
+        }
+        else
+        {
+          return r1.Left.CompareTo(r2.Left);
+        }
+      });
+      
+      List<MapObject> mergedMapObjects = new List<MapObject>();
+      MapObject previous = null;
+      foreach (MapObject current in mapObjects)
+      {
+        if (current.Bounds is CircleF)
+        {
+          mergedMapObjects.Add(current);
+          continue;
+        }
+          
+        if (previous == null)
+        {
+          previous = current;
+          continue;
+        }
+
+        var prevRect = (RectangleF)previous.Bounds;
+        var currentRect = (RectangleF)current.Bounds;
+
+        if (Math.Abs(prevRect.Top - currentRect.Top) < 0.05 && Math.Abs(prevRect.Bottom - currentRect.Bottom) < 0.05 &&
+            Math.Abs(prevRect.Right - currentRect.Left) < 0.05)
+        {
+          previous = new MapObject(prevRect, currentRect);
+          continue;
+        }
+
+        if (mergedMapObjects.Count > 0)
+        {
+          var lastMerged = mergedMapObjects.Last();
+          if (lastMerged.Bounds is RectangleF lastMergedRect)
+          {
+            /*TODO: Merge the just-created object with the previous row if it matches (left + right are the same, and the bottom of the
+              old one and the top of the new one match)
+              if (shouldMerge)
+              {
+                mergedMapObjects[mergedMapObjects.Count - 1] = new MapObject(lastMerged, newlyCreated);
+                continue;
+              }*/
+          }
+        }
+
+        // Couldn't figure out how to merge the newly created record (poorly named "previous") with the last merged
+        // row, so just add it as its own thing. Of course, the next merged item still gets a chance to merge with
+        // this in the future, so all is not lost.
+        mergedMapObjects.Add(previous);
+        previous = current;
+        
+      }
+      
+      
+      _collisionTargets.AddRange(mergedMapObjects);
     }
 
     return _collisionTargets;

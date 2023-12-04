@@ -14,19 +14,26 @@ using MonoGame.Extended.Tiled;
 /// </summary>
 public class MapObject: ICollisionActor
 {
-  
-  private readonly TiledMapTilesetTile tilesetTile;
-  private readonly TiledMapTile tile;
 
   public MapObject(TiledMap map, TiledMapTile tile, TiledMapTilesetTile tilesetTile, Vector2 scale)
   {
-    this.tile = tile;
-    this.tilesetTile = tilesetTile;
-    
     var collisionBounds = tilesetTile.Objects[0];
     this.Bounds = new RectangleF(
       (new Point2(tile.X * map.TileWidth, tile.Y * map.TileHeight) + collisionBounds.Position) * scale,
       collisionBounds.Size * scale
+    );
+  }
+
+  public MapObject(RectangleF r1, RectangleF r2)
+  {
+    var x = Math.Min(r1.Position.X, r2.Position.Y);
+    var y = Math.Min(r1.Position.Y, r2.Position.Y);
+    
+    this.Bounds = new RectangleF(
+      x,
+      y, 
+      Math.Max(r1.Right - x, r2.Right - x), 
+      Math.Max(r1.Bottom - y, r2.Bottom - y)
     );
   }
   
@@ -36,4 +43,6 @@ public class MapObject: ICollisionActor
   }
 
   public IShapeF Bounds { get; }
+
+  public override string ToString() => this.Bounds.ToString();
 }
