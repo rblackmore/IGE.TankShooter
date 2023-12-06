@@ -26,7 +26,7 @@ public class MapObject: ICollisionActor
 
   public MapObject(RectangleF r1, RectangleF r2)
   {
-    var x = Math.Min(r1.Position.X, r2.Position.Y);
+    var x = Math.Min(r1.Position.X, r2.Position.X);
     var y = Math.Min(r1.Position.Y, r2.Position.Y);
     
     this.Bounds = new RectangleF(

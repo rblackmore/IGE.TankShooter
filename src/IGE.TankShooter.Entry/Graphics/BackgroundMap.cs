@@ -94,119 +94,12 @@ public class BackgroundMap
         new EdgeOfTheWorld(_game, EdgeOfTheWorld.Side.Right, BoundingBox)
       };
 
-      // TODO: API still seems a bit lacking: https://community.monogame.net/t/getting-tile-properties-from-tiledmaptile/8858/6
-      // TODO: But essentially for each tile, we loop over all tilesets and their respective tiles until we find the
-      // TODO: one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
-      // TODO: At least we only need to do it once for now.
-
-      List<MapObject> mapObjects = new List<MapObject>();
-      foreach (var layer in _map.TileLayers)
-      {
-        foreach (var tile in layer.Tiles)
-        {
-          if (!tile.IsBlank)
-          {
-            // Oh wow, this is all a little crazy.
-            // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
-            // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
-            // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
-            // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
-            // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
-            // them to find out what their index is.
-            var tileset = _map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
-            var tilesetFirstIdentifier = _map.GetTilesetFirstGlobalIdentifier(tileset);
-            var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
-            var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
-            
-            if (tilesetTile != null && tilesetTile.Objects.Count > 0)
-            {
-              var mapObject = new MapObject(_map, tile, tilesetTile, _transform.Scale);
-              mapObjects.Add(mapObject);
-            }
-          }
-        }
-      }
-     
-      // In order to merge adjacent objects together, we need to sort them from top to bottom, left to right.
-      // This is because the merge algorithm below iterates over them assuming they are in this order, merging
-      // horizontally adjacent cells before then merging vertically adjacent ones.
+      var mapObjects = LoadCollisionShapesFromTiledMap(_map, _transform);
       
-      /*Note that instead of sorting here, we could instead (and perhaps *should* instead) ask each cell to iterate
-      over all other cells to look for merge candidates. */
-      mapObjects.Sort((m1, m2) =>
-      {
-        if (m1.Bounds is CircleF)
-        {
-          return 1;
-        }
-
-        if (m2.Bounds is CircleF)
-        {
-          return -1;
-        }
-
-        var r1 = (RectangleF)m1.Bounds;
-        var r2 = (RectangleF)m2.Bounds;
-       
-        if (Math.Abs(r1.Top - r2.Top) > 0.05)
-        {
-          return r1.Top.CompareTo(r2.Top);
-        }
-        else
-        {
-          return r1.Left.CompareTo(r2.Left);
-        }
-      });
-      
-      List<MapObject> mergedMapObjects = new List<MapObject>();
-      MapObject previous = null;
-      foreach (MapObject current in mapObjects)
-      {
-        if (current.Bounds is CircleF)
-        {
-          mergedMapObjects.Add(current);
-          continue;
-        }
-          
-        if (previous == null)
-        {
-          previous = current;
-          continue;
-        }
-
-        var prevRect = (RectangleF)previous.Bounds;
-        var currentRect = (RectangleF)current.Bounds;
-
-        if (Math.Abs(prevRect.Top - currentRect.Top) < 0.05 && Math.Abs(prevRect.Bottom - currentRect.Bottom) < 0.05 &&
-            Math.Abs(prevRect.Right - currentRect.Left) < 0.05)
-        {
-          previous = new MapObject(prevRect, currentRect);
-          continue;
-        }
-
-        if (mergedMapObjects.Count > 0)
-        {
-          var lastMerged = mergedMapObjects.Last();
-          if (lastMerged.Bounds is RectangleF lastMergedRect)
-          {
-            /*TODO: Merge the just-created object with the previous row if it matches (left + right are the same, and the bottom of the
-              old one and the top of the new one match)
-              if (shouldMerge)
-              {
-                mergedMapObjects[mergedMapObjects.Count - 1] = new MapObject(lastMerged, newlyCreated);
-                continue;
-              }*/
-          }
-        }
-
-        // Couldn't figure out how to merge the newly created record (poorly named "previous") with the last merged
-        // row, so just add it as its own thing. Of course, the next merged item still gets a chance to merge with
-        // this in the future, so all is not lost.
-        mergedMapObjects.Add(previous);
-        previous = current;
-        
-      }
-      
+      // Call MergeMapObjects twice. The first time, it will combine all horizontally of adjacent objects
+      // together, and the next time, it will do vertically adjacent objects.
+      // We can optimise the function so that it only needs one pass, but this suffices for now.
+      var mergedMapObjects = MergeMapObjects(MergeMapObjects(mapObjects));
       
       _collisionTargets.AddRange(mergedMapObjects);
     }
@@ -248,5 +141,142 @@ public class BackgroundMap
         }
       }
     }
+  }
+
+  /**
+   * API still seems a bit lacking: https://community.monogame.net/t/getting-tile-properties-from-tiledmaptile/8858/6
+   * But essentially for each tile, we loop over all tilesets and their respective tiles until we find the
+   * one which matches the tile in question, so that we can ask questions like "what is your collision bounds".
+   * At least we only need to do it once for now.
+   */
+  private static List<MapObject> LoadCollisionShapesFromTiledMap(TiledMap map, Transform2 transform)
+  {
+    List<MapObject> mapObjects = new List<MapObject>();
+    foreach (var layer in map.TileLayers)
+    {
+      foreach (var tile in layer.Tiles)
+      {
+        if (!tile.IsBlank)
+        {
+          // Oh wow, this is all a little crazy.
+          // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
+          // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
+          // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
+          // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
+          // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
+          // them to find out what their index is.
+          var tileset = map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
+          var tilesetFirstIdentifier = map.GetTilesetFirstGlobalIdentifier(tileset);
+          var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
+          var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
+          
+          if (tilesetTile != null && tilesetTile.Objects.Count > 0)
+          {
+            var mapObject = new MapObject(map, tile, tilesetTile, transform.Scale);
+            mapObjects.Add(mapObject);
+          }
+        }
+      }
+    }
+    
+    SortMapObjects(mapObjects);
+
+    return mapObjects;
+  }
+
+  /**
+   * In order to merge adjacent objects together, we need to sort them from top to bottom, left to right.
+   * This is because the merge algorithm below iterates over them assuming they are in this order, merging
+   * horizontally adjacent cells before then merging vertically adjacent ones.
+   *  
+   * Not sure this is required... objects in a tiled map seem by convention to already be laid out from left
+   * to right, top to bottom.
+   */
+  private static void SortMapObjects(List<MapObject> mapObjects)
+  {
+    mapObjects.Sort((m1, m2) =>
+    {
+      if (m1.Bounds is CircleF)
+      {
+        return 1;
+      }
+
+      if (m2.Bounds is CircleF)
+      {
+        return -1;
+      }
+
+      var r1 = (RectangleF)m1.Bounds;
+      var r2 = (RectangleF)m2.Bounds;
+     
+      if (Math.Abs(r1.Top - r2.Top) > 0.05)
+      {
+        return r1.Top.CompareTo(r2.Top);
+      }
+      else
+      {
+        return r1.Left.CompareTo(r2.Left);
+      }
+    });
+  }
+
+  private static bool IsWithinMergeDistance(float a, float b)
+  {
+    const float MERGE_LEEWAY = 3;
+    return Math.Abs(a - b) < MERGE_LEEWAY;
+  }
+
+  private static IEnumerable<MapObject> MergeMapObjects(IEnumerable<MapObject> mapObjects)
+  {
+    List<MapObject> mergedMapObjects = new List<MapObject>();
+    MapObject currentObj = null;
+    foreach (MapObject nextObj in mapObjects)
+    {
+      if (nextObj.Bounds is CircleF)
+      {
+        mergedMapObjects.Add(nextObj);
+        continue;
+      }
+        
+      if (currentObj == null)
+      {
+        currentObj = nextObj;
+        continue;
+      }
+
+      var currentRect = (RectangleF)currentObj.Bounds;
+      var nextRect = (RectangleF)nextObj.Bounds;
+
+      // Should we merge this with the previously collected objects to the left or above?
+      if (
+        (
+          IsWithinMergeDistance(currentRect.Top, nextRect.Top) &&
+          IsWithinMergeDistance(currentRect.Bottom, nextRect.Bottom) &&
+          IsWithinMergeDistance(currentRect.Right, nextRect.Left)
+        ) || (
+          IsWithinMergeDistance(currentRect.Left, nextRect.Left) &&
+          IsWithinMergeDistance(currentRect.Right, nextRect.Right) &&
+          IsWithinMergeDistance(currentRect.Bottom, nextRect.Top)
+        )
+      )
+      {
+        currentObj = new MapObject(currentRect, nextRect);
+        continue;
+      }
+
+      // Couldn't figure out how to merge the newly created record with the last merged
+      // row, so just add it as its own thing. Of course, the next merged item still gets a chance to merge with
+      // this in the future, so all is not lost.
+      mergedMapObjects.Add(currentObj);
+      currentObj = nextObj;
+      
+    }
+
+    if (currentObj != null)
+    {
+      mergedMapObjects.Add(currentObj);
+    }
+
+    return mergedMapObjects;
   }
 }
