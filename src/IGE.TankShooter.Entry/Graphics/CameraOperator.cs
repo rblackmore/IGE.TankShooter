@@ -43,6 +43,7 @@ public class CameraOperator
     this.movement.MaxVelocity = Tank.MAX_SPEED;
     this.movement.MinVelocity = Tank.MIN_SPEED;
     this.movement.Acceleration = Tank.ACCELERATION / 8;
+    this.movement.Deceleration = Tank.DECELERATION / 8;
   }
 
   public void CutTo(Vector2 position)

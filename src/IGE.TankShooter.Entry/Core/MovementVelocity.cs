@@ -29,6 +29,11 @@ public class MovementVelocity
   public float Acceleration { get; set; }
 
   /// <summary>
+  /// Acceleration per second.
+  /// </summary>
+  public float Deceleration { get; set; }
+
+  /// <summary>
   /// Current Direction.
   /// </summary>
   public Vector2 Direction { get; set; }
@@ -64,7 +69,7 @@ public class MovementVelocity
   public void DecreaseVelocity(GameTime gameTime)
   {
     var deltaTime = gameTime.GetElapsedSeconds();
-    this.Velocity -= this.Acceleration * deltaTime;
+    this.Velocity -= this.Deceleration * deltaTime;
   }
 
   /// <summary>
@@ -73,7 +78,6 @@ public class MovementVelocity
   /// <param name="gameTime">Current Gametime.</param>
   public void ReturnToZero(GameTime gameTime)
   {
-
     if (this.Velocity == 0)
     {
       return;

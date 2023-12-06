@@ -22,7 +22,8 @@ public class Tank : GameObject, ICollisionActor
   private Transform2 Transform;
 
   private const float MAX_DIRECTION_CHANGE_RATE = MathF.PI; // Radians per second.
-  public const float ACCELERATION = 5.0f; // Units per second.
+  public const float ACCELERATION = 10.0f; // Units per second.
+  public const float DECELERATION = 20.0f; // Units per second.
   public const float MIN_SPEED = 0.0f; // Units per second.
   public const float MAX_SPEED = 10.0f; // Units per second.
 
@@ -35,7 +36,7 @@ public class Tank : GameObject, ICollisionActor
     this.tankGame = tankGame;
     this.initialPosition = initialPosition;
     this.Turret = new Turret(tankGame, this, new Vector2(0f, 0.75f));
-    bounds = new CircleF(initialPosition, 1);
+    bounds = new CircleF(initialPosition, 0.5f);
   }
 
   public Vector2 CurrentPosition => Transform.Position;
@@ -50,6 +51,7 @@ public class Tank : GameObject, ICollisionActor
     this.velocity.MaxVelocity = 10.0f;
     this.velocity.MinVelocity = -10.0f;
     this.velocity.Acceleration = ACCELERATION;
+    this.velocity.Deceleration = DECELERATION;
     base.Initialize();
   }
 
@@ -64,7 +66,7 @@ public class Tank : GameObject, ICollisionActor
 
     this.Sprite = new Sprite(texture);
     this.Transform = new Transform2(new Vector2(initialPosition.X, initialPosition.Y), 0.0f, new Vector2(spriteScale));
-    this.bounds.Radius = 3f;
+    this.bounds.Radius = 1.5f;
    
     this.Turret.LoadContent(content, this.Transform.Position, this.Transform.Rotation, spriteScale);
   }
@@ -90,8 +92,10 @@ public class Tank : GameObject, ICollisionActor
     // of the vector will smoothly interpolate from up to down, the horizontal component
     // is only minuscule, meaning the tank will instantly flip from one direction to the other
     // during the interpolation. This normalisation results in the tank having to travel via a wide arc.
-    this.velocity.Direction =
-      Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE).NormalizedCopy();
+    if (this.velocity.Velocity > 1f) {
+      this.velocity.Direction =
+        Vector2.Lerp(this.velocity.Direction, this.velocity.TargetDirection, deltaTime * MAX_DIRECTION_CHANGE_RATE).NormalizedCopy();
+    }
   }
 
   private void MoveTank(GameTime gameTime)
@@ -157,6 +161,31 @@ public class Tank : GameObject, ICollisionActor
     if (collisionInfo.Other is Enemy enemy)
     {
       this.tankGame.OnPlayerHit(enemy);
+    }
+    else if (collisionInfo.Other is MapObject or EdgeOfTheWorld)
+    {
+      
+      // TODO: Investigate and fix this hack.
+      // TODO: Can't for the life of me figure out why the first time (or first few times) we collide, we get
+      // TODO: an absurd penetration vector back that sends us many times further away from the collision target
+      // TODO: than its size, making us fly over the screen, but then it calms down after a few hits to more sensible
+      // TODO: sizes. By excluding values that are bigger than the thing we are colliding into, it *seems* to work,
+      // TODO: but it would be much better to actually fix the underlying issue.
+      if (collisionInfo.Other.Bounds is RectangleF rect)
+      {
+        if (Math.Abs(collisionInfo.PenetrationVector.X) > rect.Width || Math.Abs(collisionInfo.PenetrationVector.Y) > rect.Height)
+        {
+          return;
+        }
+      } else if (collisionInfo.Other.Bounds is CircleF circle)
+      {
+        if (collisionInfo.PenetrationVector.LengthSquared() > circle.Radius * circle.Radius)
+        {
+          return;
+        }
+      }
+      
+      this.Transform.Position -= collisionInfo.PenetrationVector;
     }
   }
 
