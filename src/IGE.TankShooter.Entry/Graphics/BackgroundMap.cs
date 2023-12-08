@@ -204,7 +204,7 @@ public class BackgroundMap
 
   private static bool IsWithinMergeDistance(float a, float b)
   {
-    const float MERGE_LEEWAY = 3;
+    const float MERGE_LEEWAY = 2;
     return Math.Abs(a - b) < MERGE_LEEWAY;
   }
 
