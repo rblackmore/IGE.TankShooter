@@ -152,32 +152,14 @@ public class BackgroundMap
   private static List<MapObject> LoadCollisionShapesFromTiledMap(TiledMap map, Transform2 transform)
   {
     List<MapObject> mapObjects = new List<MapObject>();
-    foreach (var layer in map.TileLayers)
+    map.ForEachTile(((tile, tilesetTile) =>
     {
-      foreach (var tile in layer.Tiles)
+      if (tilesetTile.Objects.Count > 0)
       {
-        if (!tile.IsBlank)
-        {
-          // Oh wow, this is all a little crazy.
-          // Despite the weirdness regarding global + local identifiers, there is one other quirk which is that not
-          // all tiles are included in the exported tileset XML file. Specifically, if there is no custom property
-          // or collision set on the tile, then it is not included. Thus, the tileset will report that it has a large
-          // number of tiles, even though the underlying tileset.Tiles array  here only has a subset of those tiles.
-          // End result: We can't reliably index into the tileset.Tiles array, but rather need to loop over each of
-          // them to find out what their index is.
-          var tileset = map.GetTilesetByTileGlobalIdentifier(tile.GlobalIdentifier);
-          var tilesetFirstIdentifier = map.GetTilesetFirstGlobalIdentifier(tileset);
-          var tilesetTileLocalIdentifier = tile.GlobalIdentifier - tilesetFirstIdentifier;
-          var tilesetTile = tileset.Tiles.FirstOrDefault(t => t.LocalTileIdentifier == tilesetTileLocalIdentifier);
-          
-          if (tilesetTile != null && tilesetTile.Objects.Count > 0)
-          {
-            var mapObject = new MapObject(map, tile, tilesetTile, transform.Scale);
-            mapObjects.Add(mapObject);
-          }
-        }
+        var mapObject = new MapObject(map, tile, tilesetTile, transform.Scale);
+        mapObjects.Add(mapObject);
       }
-    }
+    }));
     
     SortMapObjects(mapObjects);
 
