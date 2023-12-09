@@ -33,6 +33,7 @@ public class Game1 : Game
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
   private CameraOperator CameraOperator;
+  private Pathfinder Pathfinder;
 
   private int EnemiesRemaining = 5;
   private int Points = 0;
@@ -58,6 +59,9 @@ public class Game1 : Game
     //  * Creating the edge of the world collision objects.
     Background.LoadContent(Content, GraphicsDevice);
     
+    Pathfinder = Background.CreatePathfinder();
+    Pathfinder.LoadContent();
+    
     var collisionBounds = Background.BoundingBox;
     collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
     CollisionComponent = new CollisionComponent(collisionBounds);
@@ -81,6 +85,11 @@ public class Game1 : Game
     this.Services.AddService(this.Camera);
 
     base.Initialize();
+  }
+
+  public Tank GetTank()
+  {
+    return this.tank;
   }
 
   protected override void LoadContent()
@@ -115,7 +124,7 @@ public class Game1 : Game
     
     this.tank.Update(gameTime);
     CameraOperator.Update(gameTime);
-
+    this.Pathfinder.Update(tank.CurrentPosition, Camera.ScreenToWorld(Mouse.GetState().Position.ToVector2()));
     
     foreach (var bullet in this.Bullets)
     {
@@ -172,6 +181,7 @@ public class Game1 : Game
     this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp, blendState:BlendState.AlphaBlend);
     
     this.Background.Draw(spriteBatch);
+    this.Pathfinder.Draw(spriteBatch);
 
     this.tank.Draw(gameTime, spriteBatch);
 

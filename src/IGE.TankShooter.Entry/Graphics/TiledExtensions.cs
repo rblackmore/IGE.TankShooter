@@ -22,6 +22,21 @@ public static class TiledExtensions
       }
     }
   }
+
+  public static bool HasObjectAt(this TiledMap map, int x, int y)
+  {
+    foreach (var layer in map.TileLayers)
+    {
+      var tile = layer.Tiles[y * map.Width + x];
+      var tilesetTile = tile.GetTilesetTile(map);
+      if (tilesetTile != null && tilesetTile.Objects.Count > 0)
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
   
   public static TiledMapTilesetTile GetTilesetTile(this TiledMapTile tile, TiledMap map)
   {

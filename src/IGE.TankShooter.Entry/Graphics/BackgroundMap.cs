@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Core;
 
@@ -11,13 +10,17 @@ using GameObjects;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
-using MonoGame.Extended.Input.InputListeners;
+using MonoGame.Extended.Input;
 using MonoGame.Extended.Sprites;
 using MonoGame.Extended.Tiled;
 using MonoGame.Extended.Tiled.Renderers;
+
+using QuikGraph;
+using QuikGraph.Algorithms;
 
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 
@@ -51,6 +54,7 @@ public class BackgroundMap
 
   private readonly Transform2 _transform;
   private readonly Game1 _game;
+  private AdjacencyGraph<int, Edge<int>> _pathfindingGraph;
 
   public BackgroundMap(Game1 game)
   {
@@ -260,5 +264,10 @@ public class BackgroundMap
     }
 
     return mergedMapObjects;
+  }
+
+  public Pathfinder CreatePathfinder()
+  {
+    return new Pathfinder(_map, TileWidthWorldUnits);
   }
 }
