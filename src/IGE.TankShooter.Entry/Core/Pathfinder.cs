@@ -1,5 +1,6 @@
 ﻿namespace IGE.TankShooter.Entry.Core;
 
+using System;
 using System.Collections.Generic;
 
 using Graphics;
@@ -12,6 +13,8 @@ using MonoGame.Extended.Tiled;
 
 using QuikGraph;
 using QuikGraph.Algorithms;
+using QuikGraph.Algorithms.Observers;
+using QuikGraph.Algorithms.ShortestPath;
 
 /// <summary>
 /// Finds the shortest path between two points on the map.
@@ -42,7 +45,7 @@ public class Pathfinder
 
   public void LoadContent()
   {
-    this._pathfindingGraph = BuildRectangularGraph();
+    this._pathfindingGraph = BuildRectangularGraphWIthDiagonals();
   }
 
   private Vector2 WorldToTileCoords(Vector2 worldValues)
@@ -63,16 +66,137 @@ public class Pathfinder
     var destTile = WorldToTileCoords(dest);
     var mouseVertex = (int)destTile.X + (int)destTile.Y * _map.Width;
 
-    var algo = _pathfindingGraph.ShortestPathsAStar(
-      _ => 1,
-      _ => 1,
-      targetVertex
-    );
+    var edgeWeights = new Func<Edge<int>, double>(edge =>
+    {
+      var source = PathfindingGridVertexToWorld(edge.Source);
+      var target = PathfindingGridVertexToWorld(edge.Target);
 
-    if (!algo(mouseVertex, out _pathfindingResults))
+      // Either moving left/right, or up/down, but not diagonally.
+      if ((int)source.X == (int)target.X || (int)source.Y == (int)target.Y)
+      {
+        return 1;
+      }
+      else
+      {
+        // Diagonal movement is the hypotenuse of a 1 x 1 square, which is approx 1.4.
+        return 1.4;
+      }
+    });
+
+    // TODO: Use this heuristic to prioritise vertices for which the direction from the tank to the mouse is similar
+    //       to the direction from the tank to the vertex in question.
+    /*var vectorToTarget = targetTile - destTile;
+    var angleToTarget = vectorToTarget.ToAngle();
+    var costHeuristic = new Func<int, double>(vertex =>
+    {
+      var vertexTile = PathfindingGridVertexToWorld(vertex);
+      var vectorToVertexFromTarget = targetTile - vertexTile;
+      var angleToVertexFromTarget = vectorToVertexFromTarget.ToAngle();
+      return angleToVertexFromTarget - angleToTarget;
+    });*/
+    var costHeuristic = new Func<int, double>(_ => 1);
+
+    var algo = new AStarShortestPathAlgorithm<int, Edge<int>>(_pathfindingGraph, edgeWeights, costHeuristic);
+
+    
+    algo.FinishVertex += vertex =>
+    {
+      if (vertex == mouseVertex)
+      {
+        algo.Abort();
+      }
+    };
+   
+    var predecessors = new VertexPredecessorRecorderObserver<int, Edge<int>>();
+    using (predecessors.Attach(algo))
+    {
+      // Run the algorithm with A set to be the source
+      algo.Compute(targetVertex);
+    }
+
+    if (!predecessors.TryGetPath(mouseVertex, out _pathfindingResults))
     {
       _pathfindingResults = null;
     }
+  }
+
+  private AdjacencyGraph<int, Edge<int>> BuildRectangularGraphWIthDiagonals()
+  {
+    var hasObjectGraph = new bool[_map.Width, _map.Height];
+    for (int y = 0; y < _map.Height; y ++)
+    {
+      for (int x = 0; x < _map.Width; x ++)
+      {
+        if (_map.HasObjectAt(x, y))
+        {
+          hasObjectGraph[x, y] = true;
+        }
+      }
+    }
+
+    List<Edge<int>> pathfindingEdges = new List<Edge<int>>();
+    for (int y = 0; y < _map.Height - 1; y ++)
+    {
+      for (int x = 0; x < _map.Width - 1; x ++)
+      {
+        if (hasObjectGraph[x, y])
+        {
+          continue;
+        }
+
+        var source = y * _map.Width + x;
+            
+        // Above
+        if (y > 0 && !hasObjectGraph[x, y - 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y - 1) * _map.Width + x));
+        }
+
+        // Above-right
+        if (y > 0 && !hasObjectGraph[x + 1, y - 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y - 1) * _map.Width + x + 1));
+        }
+         
+        // Above-left
+        if (y > 0 && x > 0 && !hasObjectGraph[x - 1, y - 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y - 1) * _map.Width + x - 1));
+        }
+          
+        // Right
+        if (!hasObjectGraph[x + 1, y])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, y * _map.Width + x + 1));
+        }
+          
+        // Below
+        if (!hasObjectGraph[x, y + 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y + 1) * _map.Width + x));
+        }
+
+        // Below-right
+        if (!hasObjectGraph[x + 1, y + 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y + 1) * _map.Width + x + 1));
+        }
+         
+        // Below-left
+        if (x > 0 && !hasObjectGraph[x - 1, y + 1])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, (y + 1) * _map.Width + x - 1));
+        }
+          
+        // Left
+        if (x > 0 && !hasObjectGraph[x - 1, y])
+        {
+          pathfindingEdges.Add(new Edge<int>(source, y * _map.Width + x - 1));
+        }
+      }
+    }
+    
+    return pathfindingEdges.ToAdjacencyGraph<int, Edge<int>>();
   }
 
   private AdjacencyGraph<int, Edge<int>> BuildRectangularGraph()
