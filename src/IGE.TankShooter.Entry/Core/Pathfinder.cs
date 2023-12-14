@@ -81,18 +81,21 @@ public class Pathfinder
       return (source - target).Length();
     });
 
-    // TODO: Use this heuristic to prioritise vertices for which the direction from the tank to the mouse is similar
-    //       to the direction from the tank to the vertex in question.
-    /*var vectorToTarget = targetTile - destTile;
-    var angleToTarget = vectorToTarget.ToAngle();
-    var costHeuristic = new Func<int, double>(vertex =>
+    // Grid-based movement including diagonals.
+    // http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#heuristics-for-grid-maps
+    // https://stackoverflow.com/questions/20547400/why-allowing-diagonal-movement-would-make-the-a-and-manhattan-distance-inadmiss
+    var costHeuristic = new Func<int, double>(currentVertex =>
     {
-      var vertexTile = PathfindingGridVertexToWorld(vertex);
-      var vectorToVertexFromTarget = targetTile - vertexTile;
-      var angleToVertexFromTarget = vectorToVertexFromTarget.ToAngle();
-      return angleToVertexFromTarget - angleToTarget;
-    });*/
-    var costHeuristic = new Func<int, double>(_ => 1);
+      var currentX = currentVertex % _map.Width;
+      var currentY = currentVertex / _map.Width;
+      
+      var destX = destVertex % _map.Width;
+      var destY = destVertex / _map.Width;
+      
+      var yDist = Math.Abs(destY - currentY);
+      var xDist = Math.Abs(destX - currentX);
+      return Math.Max(yDist, xDist);
+    });
 
     var algo = new AStarShortestPathAlgorithm<int, Edge<int>>(_pathfindingGraph, edgeWeights, costHeuristic);
 
