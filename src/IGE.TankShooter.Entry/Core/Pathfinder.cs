@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks.Dataflow;
 
 using Graphics;
 
@@ -11,11 +10,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
-using MonoGame.Extended.Shapes;
 using MonoGame.Extended.Tiled;
 
 using QuikGraph;
-using QuikGraph.Algorithms;
 using QuikGraph.Algorithms.Observers;
 using QuikGraph.Algorithms.ShortestPath;
 
@@ -36,11 +33,8 @@ public class Pathfinder
   private readonly Vector2 _mapScale;
 
   private AdjacencyGraph<int, Edge<int>> _pathfindingGraph;
-  private IEnumerable<Edge<int>> _pathfindingResults;
+  private NavigationPath _pathfindingResults;
   private readonly float _tileWidthWorldUnits;
-
-  private int extraTargetVertex = -1;
-  private int extraDestVertex = -1;
 
   public Pathfinder(TiledMap map, float tileWidthWorldUnits)
   {
@@ -51,8 +45,6 @@ public class Pathfinder
 
   public void LoadContent()
   {
-    // this._pathfindingGraph = BuildPolygonBasedNavmeshFromTiledLayer();
-    // this._pathfindingGraph = BuildRectangularGraph();
     this._pathfindingGraph = BuildRectangularGraphWithDiagonals();
   }
 
@@ -74,6 +66,22 @@ public class Pathfinder
     var destTile = WorldToTileCoords(dest);
     var destVertex = (int)destTile.X + (int)destTile.Y * _map.Width;
 
+    // No point in trying to pathfind to points which don't exist. This will always result in having to traverse
+    // the entire graph to no avail, which will have a performance impact.
+    // Instead, choose another point to navigate to that is close to the destination vertex.
+    if (!_pathfindingGraph.ContainsVertex(destVertex))
+    {
+      var closestVertex = ClosestVertex(destVertex);
+      Console.WriteLine($"No vertex at {destVertex}, will pathfind to the closest point {closestVertex} instead.");
+      destVertex = closestVertex;
+    }
+
+    if (_pathfindingResults != null && _pathfindingResults.Matches(targetVertex, destVertex))
+    {
+      Console.WriteLine($"No need to perform pathfinding to {destVertex}, we are up to date.");
+      return;
+    }
+
     var edgeWeights = new Func<Edge<int>, double>(edge =>
     {
       var source = PathfindingGridVertexToWorld(edge.Source);
@@ -83,7 +91,8 @@ public class Pathfinder
 
     // Grid-based movement including diagonals.
     // http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#heuristics-for-grid-maps
-    // https://stackoverflow.com/questions/20547400/why-allowing-diagonal-movement-would-make-the-a-and-manhattan-distance-inadmiss
+    const int D = 1;
+    double D2 = Math.Sqrt(2);
     var costHeuristic = new Func<int, double>(currentVertex =>
     {
       var currentX = currentVertex % _map.Width;
@@ -91,194 +100,56 @@ public class Pathfinder
       
       var destX = destVertex % _map.Width;
       var destY = destVertex / _map.Width;
+
+     
+      // The page linked above explains that the commented out formula below is the correct way to do A* on a grid with diagonal movement.
+      // However, the search space still encompasses a huge array of edges, many more than is required to find the
+      // shorted path in most cases. After experimenting myself with completely un-principled calculations with
+      // no-mathimatical-basis-at-all, this seems to do a great job:
+      return (new Vector2(currentX, currentY) - new Vector2(destX, destY)).Length() * 4;
       
-      var yDist = Math.Abs(destY - currentY);
-      var xDist = Math.Abs(destX - currentX);
-      return Math.Max(yDist, xDist);
+      // var dy = Math.Abs(destY - currentY);
+      // var dx = Math.Abs(destX - currentX);
+
+      // return D * (dx + dy) + (D2 - 2 * D) * Math.Min(dx, dy);
     });
 
     var algo = new AStarShortestPathAlgorithm<int, Edge<int>>(_pathfindingGraph, edgeWeights, costHeuristic);
 
-    Console.WriteLine($"Asking AStar to terminate when {destVertex} found.");
+    // For debugging purposes, record which edges were visited as part of the AStar search.
+    // Will be helpful when finding out whether it faithfully follows our heuristic to narrow the search space.
+    var examinedEdges = new List<Edge<int>>();
+    algo.ExamineEdge += edge =>
+    {
+      examinedEdges.Add(edge);
+    };
+      
     algo.FinishVertex += vertex =>
     {
       if (vertex == destVertex)
       {
-        Console.WriteLine($"Terminating pathfinding because vertex {destVertex} was found.");
+        Console.WriteLine($"Terminating pathfinding because path to vertex {destVertex} was found.");
         algo.Abort();
       }
     };
 
-    // Add in extra vertices for the items of interest each time we do pathfinding, then
-    // remove them when done. Because we are potentially using navigation meshes, it is
-    // likely that the tank and enemy do not fall exactly on one of the graph vertices.
-
-    // TODO This is all very messy, doesn't seem to work as expected.
-    //   Don't remove and re-add the extra vertex each run if it hasn't changed.
-    
-    Console.WriteLine($"Removing target vertex {extraTargetVertex} and dest vertex {extraDestVertex}");
-   
-    // Be defensive here, because otherwise if the tank drives over an existing vertex, that
-    // vertex will accidentally be removed from the navigation mesh. Only remove vertexes that
-    // we created ourselves.
-   
-    if (extraDestVertex != destVertex)
-    {
-      _pathfindingGraph.RemoveVertex(extraDestVertex);
-      var nearestVertexToDest = _pathfindingGraph.Vertices.MinBy(v => (PathfindingGridVertexToWorld(v) - dest).Length());
-      
-      if (!_pathfindingGraph.ContainsVertex(destVertex))
-      {
-        Console.WriteLine($"Adding dest vertex {destVertex} and edge {destVertex}-{nearestVertexToDest}");
-        
-        extraDestVertex = destVertex;
-        _pathfindingGraph.AddVertex(destVertex);
-        _pathfindingGraph.AddEdge(new Edge<int>(destVertex, nearestVertexToDest));
-      }
-      else
-      {
-        Console.WriteLine($"Not adding dest vertex {destVertex} because it is already in the graph.");
-      }
-    }
-
-    if (extraTargetVertex != destVertex)
-    {
-      _pathfindingGraph.RemoveVertex(extraTargetVertex);
-      var nearestVertexToTarget = _pathfindingGraph.Vertices.MinBy(v => (PathfindingGridVertexToWorld(v) - target).Length());
-      
-      if (!_pathfindingGraph.ContainsVertex(targetVertex))
-      {
-        Console.WriteLine($"Adding target vertex {targetVertex} and edge {targetVertex}-{nearestVertexToTarget}");
-        
-        extraTargetVertex = targetVertex;
-        _pathfindingGraph.AddVertex(targetVertex);
-        _pathfindingGraph.AddEdge(new Edge<int>(targetVertex, nearestVertexToTarget));
-      }
-      else
-      {
-        Console.WriteLine($"Not adding target vertex {targetVertex} because it is already in the graph.");
-      }
-    }
-   
     var predecessors = new VertexPredecessorRecorderObserver<int, Edge<int>>();
     using (predecessors.Attach(algo))
     {
       // Run the algorithm with A set to be the source
-      Console.WriteLine($"Pathfinding to {targetVertex}");
+      Console.WriteLine($"Pathfinding from {targetVertex} to {destVertex}");
       algo.Compute(targetVertex);
     }
 
-    if (!predecessors.TryGetPath(destVertex, out _pathfindingResults))
+    IEnumerable<Edge<int>> result;
+    if (!predecessors.TryGetPath(destVertex, out result))
     {
-      _pathfindingResults = null;
+      _pathfindingResults = new NavigationPath(targetVertex, destVertex, null, examinedEdges);
     }
-  }
-
-  private AdjacencyGraph<int, Edge<int>> BuildPolygonBasedNavmeshFromTiledLayer()
-  {
-    var navmeshLayer = _map.ObjectLayers.FirstOrDefault(l => l.Name == "Navmesh (Polygons)");
-    if (navmeshLayer == null)
+    else
     {
-      return new AdjacencyGraph<int, Edge<int>>();
+      _pathfindingResults = new NavigationPath(targetVertex, destVertex, result, examinedEdges);
     }
-
-    var pathfindingEdges = new List<Edge<int>>();
-    foreach (var obj in navmeshLayer.Objects)
-    {
-      if (obj is TiledMapPolygonObject polygon)
-      {
-        var polygonWithMidpoints = new List<Point2>(polygon.Points.Length * 2);
-        for (int i = 0; i < polygon.Points.Length; i++)
-        {
-          int x = (int)polygon.Position.X / _map.TileWidth;
-          int y = (int)polygon.Position.Y / _map.TileHeight;
-
-          var start = polygon.Points[i];
-          int startX = x + (int)start.X / _map.TileWidth;
-          int startY = y + (int)start.Y / _map.TileHeight;
-
-          var end = polygon.Points[(i + 1) % polygon.Points.Length];
-          int endX = x + (int)end.X / _map.TileWidth;
-          int endY = y + (int)end.Y / _map.TileHeight;
-
-          int midpointX = (int)Math.Round(MathHelper.Lerp(startX, endX, 0.5f));
-          int midpointY = (int)Math.Round(MathHelper.Lerp(startY, endY, 0.5f));
-
-          polygonWithMidpoints.Add(new Point2(startX, startY));
-          polygonWithMidpoints.Add(new Point2(midpointX, midpointY));
-        }
-        
-        for (int i = 0; i < polygonWithMidpoints.Count; i ++)
-        {
-
-          int startX = (int)polygonWithMidpoints[i].X;
-          int startY = (int)polygonWithMidpoints[i].Y;
-
-          // From one point to all other points. Some lines will overlap, but
-          // that is probably okay.
-          for (int j = 0; j < polygonWithMidpoints.Count; j++)
-          {
-            if (j == i)
-            {
-              continue;
-            }
-            
-            int endX = (int)polygonWithMidpoints[j].X;
-            int endY = (int)polygonWithMidpoints[j].Y;
-          
-            pathfindingEdges.Add(new Edge<int>( Math.Min(_map.Height - 1, (startY)) * _map.Width + Math.Min(_map.Width - 1, startX), 
-              Math.Min(_map.Height - 1, (endY)) * _map.Width + Math.Min(_map.Width - 1, endX)
-            ));
-          }
-        }
-      }
-    }
-    
-    return pathfindingEdges.DistinctBy(e => $"{e.Source}-{e.Target}").ToAdjacencyGraph<int, Edge<int>>();
-  }
-
-  /// <summary>
-  /// Parse rectangles from an Object layer in the Tiled map.
-  /// See https://github.com/mikewesthad/navmesh/blob/master/tiled-navmesh-guide.md for inspiration.
-  /// </summary>
-  /// <returns></returns>
-  private AdjacencyGraph<int, Edge<int>> BuildRectangleBasedNavmeshFromTiledLayer()
-  {
-    var navmeshLayer = _map.ObjectLayers.FirstOrDefault(l => l.Name == "Navmesh (Rects)");
-    if (navmeshLayer == null)
-    {
-      return new AdjacencyGraph<int, Edge<int>>();
-    }
-
-    var pathfindingEdges = new List<Edge<int>>();
-    foreach (var obj in navmeshLayer.Objects)
-    {
-      var left = (int)(obj.Position.X) / _map.TileWidth;
-      var right = Math.Min(_map.Width - 1, left + (int)(obj.Size.Width) / _map.TileWidth);
-      var horizontalCenter = Math.Min(_map.Height - 1, left + (int)(obj.Size.Width / 2) / _map.TileWidth);
-      var top = (int)(obj.Position.Y) / _map.TileHeight;
-      var bottom = Math.Min(_map.Height - 1, top + (int)(obj.Size.Height) / _map.TileWidth);
-      var verticalCenter = Math.Min(_map.Height - 1, top + (int)(obj.Size.Height / 2) / _map.TileWidth);
-     
-      // Four sides of the rect.
-      pathfindingEdges.Add(new Edge<int>(top * _map.Width + left, top * _map.Width + right));
-      pathfindingEdges.Add(new Edge<int>(top * _map.Width + left, bottom * _map.Width + left));
-      pathfindingEdges.Add(new Edge<int>(bottom * _map.Width + left, bottom * _map.Width + right));
-      pathfindingEdges.Add(new Edge<int>(top * _map.Width + right, bottom * _map.Width + right));
-     
-      // 2 x diagonals
-      pathfindingEdges.Add(new Edge<int>(top * _map.Width + right, bottom * _map.Width + left));
-      pathfindingEdges.Add(new Edge<int>(bottom * _map.Width + right, top * _map.Width + left));
-      
-      // Horizontal line through the center
-      pathfindingEdges.Add(new Edge<int>(verticalCenter * _map.Width + left, verticalCenter * _map.Width + right));
-      
-      // Vertical line through the center
-      pathfindingEdges.Add(new Edge<int>(top * _map.Width + horizontalCenter, bottom * _map.Width + horizontalCenter));
-      
-    }
-    
-    return pathfindingEdges.DistinctBy(e => $"{e.Source}-{e.Target}").ToAdjacencyGraph<int, Edge<int>>();
   }
 
   private AdjacencyGraph<int, Edge<int>> BuildRectangularGraphWithDiagonals()
@@ -360,68 +231,6 @@ public class Pathfinder
     return pathfindingEdges.ToAdjacencyGraph<int, Edge<int>>();
   }
 
-  private AdjacencyGraph<int, Edge<int>> BuildRectangularGraph()
-  {
-    var hasObjectGraph = new bool[_map.Width, _map.Height];
-    for (int y = 0; y < _map.Height; y ++)
-    {
-      for (int x = 0; x < _map.Width; x ++)
-      {
-        if (_map.HasObjectAt(x, y))
-        {
-          hasObjectGraph[x, y] = true;
-        }
-      }
-    }
-
-    List<Edge<int>> pathfindingEdges = new List<Edge<int>>();
-    for (int y = 0; y < _map.Height - 1; y ++)
-    {
-      for (int x = 0; x < _map.Width - 1; x ++)
-      {
-        if (hasObjectGraph[x, y])
-        {
-          continue;
-        }
-
-        var source = y * _map.Width + x;
-            
-        // Above
-        if (y > 0 && !hasObjectGraph[x, y - 1])
-        {
-          pathfindingEdges.Add(new Edge<int>(source, (y - 1) * _map.Width + x));
-        }
-          
-        // Right
-        if (!hasObjectGraph[x + 1, y])
-        {
-          pathfindingEdges.Add(new Edge<int>(source, y * _map.Width + x + 1));
-        }
-          
-        // Below
-        if (!hasObjectGraph[x, y + 1])
-        {
-          pathfindingEdges.Add(new Edge<int>(source, (y + 1) * _map.Width + x));
-        }
-          
-        // Left
-        if (x > 0 && !hasObjectGraph[x - 1, y])
-        {
-          pathfindingEdges.Add(new Edge<int>(source, y * _map.Width + x - 1));
-        }
-      }
-    }
-    return pathfindingEdges.ToAdjacencyGraph<int, Edge<int>>();
-  }
-
-  private int WorldToPathfindingGridVertex(Vector2 worldCoords)
-  {
-    var tile = worldCoords / _tileWidthWorldUnits;
-    var vertex = (int)tile.X + (int)tile.Y * _map.Width;
-
-    return vertex;
-  }
-
   private Vector2 PathfindingGridVertexToWorld(int vertex)
   {
     var vertexX = vertex % _map.Width;
@@ -433,6 +242,22 @@ public class Pathfinder
       (vertexX * _map.TileWidth + _map.TileWidth / 2f) * _mapScale.X,
       (vertexY * _map.TileHeight + _map.TileHeight / 2f) * _mapScale.Y
     );
+  }
+  
+  private int ClosestVertex(int vertex)
+  {
+    var vertexX = vertex % _map.Width;
+    var vertexY = vertex / _map.Width;
+    
+    return _pathfindingGraph.Vertices.MinBy(v =>
+    {
+      var x = v % _map.Width;
+      var y = v / _map.Width;
+      return Math.Sqrt(
+        (x - vertexX) * (x - vertexX) +
+        (y - vertexY) * (y - vertexY)
+      );
+    });
   }
 
   public void Draw(SpriteBatch spriteBatch)
@@ -470,10 +295,9 @@ public class Pathfinder
       );
     }
     
-    if (_pathfindingResults != null)
+    if (_pathfindingResults != null )
     {
-      foreach (var edge in _pathfindingResults)
-      {
+      foreach (var edge in _pathfindingResults.ExaminedEdges) {
         var source = PathfindingGridVertexToWorld(edge.Source);
         var target = PathfindingGridVertexToWorld(edge.Target);
         
@@ -482,10 +306,83 @@ public class Pathfinder
         source.Y,
         target.X,
         target.Y,
-          Color.White,
-          0.3f
+          Color.LightGray,
+          0.1f
         );
+      }
+      
+      if (_pathfindingResults.Path != null)
+      {
+        foreach (var edge in _pathfindingResults.Path) {
+          var source = PathfindingGridVertexToWorld(edge.Source);
+          var target = PathfindingGridVertexToWorld(edge.Target);
+          
+          spriteBatch.DrawLine(
+          source.X,
+          source.Y,
+          target.X,
+          target.Y,
+            Color.White,
+            0.3f
+          );
+        }
       }
     }
   }
+}
+
+public class NavigationPath
+{
+  
+  private readonly int _sourceVertex;
+  private readonly int _destVertex;
+  private readonly IEnumerable<Edge<int>> _path;
+  private readonly IEnumerable<Edge<int>> _examinedEdges;
+
+  public NavigationPath(int sourceVertex, int destVertex, IEnumerable<Edge<int>> path, IEnumerable<Edge<int>> examinedEdges)
+  {
+    this._sourceVertex = sourceVertex;
+    this._destVertex = destVertex;
+    this._path = path;
+    this._examinedEdges = examinedEdges;
+  }
+
+  public IEnumerable<Edge<int>> Path => _path;
+
+  public IEnumerable<Edge<int>> ExaminedEdges => _examinedEdges;
+
+  public bool Matches(int sourceVertex, int destVertex)
+  {
+    if (this._sourceVertex == sourceVertex && this._destVertex == destVertex)
+    {
+      return true;
+    }
+
+    if (_path == null)
+    {
+      return false;
+    }
+
+    var sourceInPath = false;
+    var destInPath = false;
+    foreach (var edge in _path)
+    {
+      sourceInPath |= (edge.Source == sourceVertex);
+      destInPath |= (edge.Target == destVertex);
+      if (sourceInPath && destInPath)
+      {
+        return true;
+      }
+    }
+
+    Console.WriteLine(
+      $"Path from {_sourceVertex} to {_destVertex} does not match request path fro {sourceVertex} to {destVertex}");
+    return false;
+  }
+
+  public bool AlmostMatches(int sourceVertex, int destVertex, int gridCellsApart)
+  {
+    throw new Exception("Not implemented");
+  }
+  
 }
