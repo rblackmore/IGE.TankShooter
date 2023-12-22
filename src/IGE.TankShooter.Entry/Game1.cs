@@ -124,7 +124,6 @@ public class Game1 : Game
     
     this.tank.Update(gameTime);
     CameraOperator.Update(gameTime);
-    this.Pathfinder.Update(tank.CurrentPosition, Camera.ScreenToWorld(Mouse.GetState().Position.ToVector2()));
     
     foreach (var bullet in this.Bullets)
     {
@@ -162,10 +161,13 @@ public class Game1 : Game
     }
     
     var random = new Random();
+
     // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
     var distanceFromTank = random.NextSingle(50f, 75f);
     var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-    var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
+    spawnPosition = Vector2.Clamp(spawnPosition, Vector2.Zero, Background.BoundingBox.BottomRight);
+
+    var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank, Pathfinder);
     Enemies.Add(enemy);
     CollisionComponent.Insert(enemy);
     EnemiesRemaining--;

@@ -36,6 +36,8 @@ public class Pathfinder
   private NavigationPath _pathfindingResults;
   private readonly float _tileWidthWorldUnits;
 
+  public TiledMap Map => _map;
+
   public Pathfinder(TiledMap map, float tileWidthWorldUnits)
   {
     this._map = map;
@@ -48,23 +50,28 @@ public class Pathfinder
     this._pathfindingGraph = BuildRectangularGraphWithDiagonals();
   }
 
-  private Vector2 WorldToTileCoords(Vector2 worldValues)
+  public int TileCoordsToVertex(Vector2 worldValues)
+  {
+    return (int)worldValues.X + (int)worldValues.Y * _map.Width;
+  }
+
+  public Vector2 WorldToTileCoords(Vector2 worldValues)
   {
     return worldValues / _tileWidthWorldUnits;
   }
 
-  public void Update(Vector2 target, Vector2 dest)
+  public NavigationPath FindPath(Vector2 target, Vector2 dest)
   {
     // Only available after calling LoadContent()
     if (_pathfindingGraph == null)
     {
-      return;
+      return null;
     }
   
     var targetTile = WorldToTileCoords(target);
-    var targetVertex = (int)targetTile.X + (int)targetTile.Y * _map.Width;
+    var targetVertex = TileCoordsToVertex(targetTile);
     var destTile = WorldToTileCoords(dest);
-    var destVertex = (int)destTile.X + (int)destTile.Y * _map.Width;
+    var destVertex = TileCoordsToVertex(destTile);
 
     // No point in trying to pathfind to points which don't exist. This will always result in having to traverse
     // the entire graph to no avail, which will have a performance impact.
@@ -74,12 +81,6 @@ public class Pathfinder
       var closestVertex = ClosestVertex(destVertex);
       Console.WriteLine($"No vertex at {destVertex}, will pathfind to the closest point {closestVertex} instead.");
       destVertex = closestVertex;
-    }
-
-    if (_pathfindingResults != null && _pathfindingResults.Matches(targetVertex, destVertex))
-    {
-      Console.WriteLine($"No need to perform pathfinding to {destVertex}, we are up to date.");
-      return;
     }
 
     var edgeWeights = new Func<Edge<int>, double>(edge =>
@@ -119,10 +120,7 @@ public class Pathfinder
     // For debugging purposes, record which edges were visited as part of the AStar search.
     // Will be helpful when finding out whether it faithfully follows our heuristic to narrow the search space.
     var examinedEdges = new List<Edge<int>>();
-    algo.ExamineEdge += edge =>
-    {
-      examinedEdges.Add(edge);
-    };
+    algo.ExamineEdge += edge => examinedEdges.Add(edge);
       
     algo.FinishVertex += vertex =>
     {
@@ -136,7 +134,6 @@ public class Pathfinder
     var predecessors = new VertexPredecessorRecorderObserver<int, Edge<int>>();
     using (predecessors.Attach(algo))
     {
-      // Run the algorithm with A set to be the source
       Console.WriteLine($"Pathfinding from {targetVertex} to {destVertex}");
       algo.Compute(targetVertex);
     }
@@ -144,11 +141,11 @@ public class Pathfinder
     IEnumerable<Edge<int>> result;
     if (!predecessors.TryGetPath(destVertex, out result))
     {
-      _pathfindingResults = new NavigationPath(targetVertex, destVertex, null, examinedEdges);
+      return new NavigationPath(this, targetVertex, destVertex, null, examinedEdges);
     }
     else
     {
-      _pathfindingResults = new NavigationPath(targetVertex, destVertex, result, examinedEdges);
+      return new NavigationPath(this, targetVertex, destVertex, result, examinedEdges);
     }
   }
 
@@ -231,7 +228,7 @@ public class Pathfinder
     return pathfindingEdges.ToAdjacencyGraph<int, Edge<int>>();
   }
 
-  private Vector2 PathfindingGridVertexToWorld(int vertex)
+  public Vector2 PathfindingGridVertexToWorld(int vertex)
   {
     var vertexX = vertex % _map.Width;
     var vertexY = vertex / _map.Width;
@@ -244,8 +241,13 @@ public class Pathfinder
     );
   }
   
-  private int ClosestVertex(int vertex)
+  public int ClosestVertex(int vertex)
   {
+    if (_pathfindingGraph.ContainsVertex(vertex))
+    {
+      return vertex;
+    }
+
     var vertexX = vertex % _map.Width;
     var vertexY = vertex / _map.Width;
     
@@ -294,53 +296,21 @@ public class Pathfinder
         0.1f
       );
     }
-    
-    if (_pathfindingResults != null )
-    {
-      foreach (var edge in _pathfindingResults.ExaminedEdges) {
-        var source = PathfindingGridVertexToWorld(edge.Source);
-        var target = PathfindingGridVertexToWorld(edge.Target);
-        
-        spriteBatch.DrawLine(
-        source.X,
-        source.Y,
-        target.X,
-        target.Y,
-          Color.LightGray,
-          0.1f
-        );
-      }
-      
-      if (_pathfindingResults.Path != null)
-      {
-        foreach (var edge in _pathfindingResults.Path) {
-          var source = PathfindingGridVertexToWorld(edge.Source);
-          var target = PathfindingGridVertexToWorld(edge.Target);
-          
-          spriteBatch.DrawLine(
-          source.X,
-          source.Y,
-          target.X,
-          target.Y,
-            Color.White,
-            0.3f
-          );
-        }
-      }
-    }
   }
 }
 
 public class NavigationPath
 {
-  
+
+  private readonly Pathfinder _pathfinder;  
   private readonly int _sourceVertex;
   private readonly int _destVertex;
   private readonly IEnumerable<Edge<int>> _path;
   private readonly IEnumerable<Edge<int>> _examinedEdges;
 
-  public NavigationPath(int sourceVertex, int destVertex, IEnumerable<Edge<int>> path, IEnumerable<Edge<int>> examinedEdges)
+  public NavigationPath(Pathfinder pathfinder, int sourceVertex, int destVertex, IEnumerable<Edge<int>> path, IEnumerable<Edge<int>> examinedEdges)
   {
+    this._pathfinder = pathfinder;
     this._sourceVertex = sourceVertex;
     this._destVertex = destVertex;
     this._path = path;
@@ -350,6 +320,17 @@ public class NavigationPath
   public IEnumerable<Edge<int>> Path => _path;
 
   public IEnumerable<Edge<int>> ExaminedEdges => _examinedEdges;
+  
+  public bool Matches(Vector2 source, Vector2 dest)
+  {
+    var sourceTileCoords = _pathfinder.WorldToTileCoords(source);
+    var sourceVertex = _pathfinder.TileCoordsToVertex(sourceTileCoords);
+    
+    var destTileCoords = _pathfinder.WorldToTileCoords(dest);
+    var destVertex = _pathfinder.TileCoordsToVertex(destTileCoords);
+
+    return Matches(sourceVertex, destVertex);
+  }
 
   public bool Matches(int sourceVertex, int destVertex)
   {
@@ -367,21 +348,117 @@ public class NavigationPath
     var destInPath = false;
     foreach (var edge in _path)
     {
-      sourceInPath |= (edge.Source == sourceVertex);
-      destInPath |= (edge.Target == destVertex);
+      sourceInPath |= edge.Source == sourceVertex || edge.Target == sourceVertex;
+      destInPath |= edge.Source == destVertex || edge.Target == destVertex;
+
       if (sourceInPath && destInPath)
       {
-        return true;
+        break;
       }
     }
 
+    if (sourceInPath && destInPath)
+    {
+      return true;
+    }
+
     Console.WriteLine(
-      $"Path from {_sourceVertex} to {_destVertex} does not match request path fro {sourceVertex} to {destVertex}");
+      $"Path from {_sourceVertex} to {_destVertex} does not match request path from {sourceVertex} to {destVertex}");
     return false;
+  }
+
+  public Vector2? NextPosition(Vector2 currentPosition)
+  {
+    if (_path == null)
+    {
+      return null;
+    }
+
+    var currentTileCoords = _pathfinder.WorldToTileCoords(currentPosition);
+    var currentVertex = _pathfinder.TileCoordsToVertex(currentTileCoords);
+    var nextVertex = ClosestSourceVertex(currentVertex);
+
+    return _pathfinder.PathfindingGridVertexToWorld(nextVertex);
+  }
+
+  private int ClosestSourceVertex(int currentVertex)
+  {
+    // This is a cheaper search then the next one which requires math to
+    // figure out the closest. If we are exactly on top of a vertex, then
+    // advance to the next one and return that.
+
+    // TODO: Expensive to create a list each time.
+    foreach (var edge in _path)
+    {
+      if (edge.Target == currentVertex)
+      {
+        return edge.Source;
+      }
+    }
+
+    var vertexX = currentVertex % _pathfinder.Map.Width;
+    var vertexY = currentVertex / _pathfinder.Map.Width;
+    
+    return _path.MinBy(edge =>
+    {
+      var x = edge.Source % _pathfinder.Map.Width;
+      var y = edge.Source / _pathfinder.Map.Width;
+      return Math.Sqrt(
+        (x - vertexX) * (x - vertexX) +
+        (y - vertexY) * (y - vertexY)
+      );
+    }).Source;
+  }
+
+  public void Draw(SpriteBatch spriteBatch)
+  {
+    if (Debug.DrawDebugLines)
+    { 
+      foreach (var edge in ExaminedEdges) {
+        var source = _pathfinder.PathfindingGridVertexToWorld(edge.Source);
+        var target = _pathfinder.PathfindingGridVertexToWorld(edge.Target);
+        
+        spriteBatch.DrawLine(
+        source.X,
+        source.Y,
+        target.X,
+        target.Y,
+          Color.LightGray,
+          0.1f
+        );
+      }
+      
+      if (Path != null)
+      {
+        foreach (var edge in Path) {
+          var source = _pathfinder.PathfindingGridVertexToWorld(edge.Source);
+          var target = _pathfinder.PathfindingGridVertexToWorld(edge.Target);
+          
+          spriteBatch.DrawLine(
+          source.X,
+          source.Y,
+          target.X,
+          target.Y,
+            Color.White,
+            0.3f
+          );
+        }
+      }
+    }
   }
 
   public bool AlmostMatches(int sourceVertex, int destVertex, int gridCellsApart)
   {
+    // TODO: Use this instead of "Matches" for two reasons:
+    //       1) The tank is constantly moving, so the fact it is a few tiles away from the
+    //          destination last time we performed pathfinding doesn't negate the need for
+    //          an enemy to continue following their path. If they are several edges away
+    //          from the tank, we probably don't need to recalculate until the tank has moved
+    //          a certain distance from our path.
+    //       2) The enemy doesn't follow their own path exactly. The physics engine pushes them
+    //          along their path, which means sometimes they are closer to a corner of a
+    //          tile that is in the path, but that corner is not part of it. Be more forgiving
+    //          when our curent position is close to the path, regardless of how far the tank is. 
     throw new Exception("Not implemented");
   }
   
