@@ -33,6 +33,7 @@ public class Game1 : Game
   private BackgroundMap Background;
   private CollisionComponent CollisionComponent;
   private CameraOperator CameraOperator;
+  private Pathfinder Pathfinder;
 
   private int EnemiesRemaining = 5;
   private int Points = 0;
@@ -58,6 +59,9 @@ public class Game1 : Game
     //  * Creating the edge of the world collision objects.
     Background.LoadContent(Content, GraphicsDevice);
     
+    Pathfinder = Background.CreatePathfinder();
+    Pathfinder.LoadContent();
+    
     var collisionBounds = Background.BoundingBox;
     collisionBounds.Inflate(EdgeOfTheWorld.BufferSize, EdgeOfTheWorld.BufferSize);
     CollisionComponent = new CollisionComponent(collisionBounds);
@@ -81,6 +85,11 @@ public class Game1 : Game
     this.Services.AddService(this.Camera);
 
     base.Initialize();
+  }
+
+  public Tank GetTank()
+  {
+    return this.tank;
   }
 
   protected override void LoadContent()
@@ -115,7 +124,6 @@ public class Game1 : Game
     
     this.tank.Update(gameTime);
     CameraOperator.Update(gameTime);
-
     
     foreach (var bullet in this.Bullets)
     {
@@ -153,10 +161,13 @@ public class Game1 : Game
     }
     
     var random = new Random();
+
     // Project outward from the tank a distance of 50-75m and then rotate randomly in a 360 degree arc.
     var distanceFromTank = random.NextSingle(50f, 75f);
     var spawnPosition = this.tank.CurrentPosition + (Vector2.One * distanceFromTank).Rotate((float)(new Random().NextDouble() * Math.PI));
-    var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank);
+    spawnPosition = Vector2.Clamp(spawnPosition, Vector2.Zero, Background.BoundingBox.BottomRight);
+
+    var enemy = new Enemy(spawnPosition, this.EnemyPersonTextures[random.Next(0, this.EnemyPersonTextures.Length)], this.tank, Pathfinder);
     Enemies.Add(enemy);
     CollisionComponent.Insert(enemy);
     EnemiesRemaining--;
@@ -172,6 +183,7 @@ public class Game1 : Game
     this.spriteBatch.Begin(transformMatrix: this.Camera.GetViewMatrix(), samplerState: SamplerState.PointClamp, blendState:BlendState.AlphaBlend);
     
     this.Background.Draw(spriteBatch);
+    this.Pathfinder.Draw(spriteBatch);
 
     this.tank.Draw(gameTime, spriteBatch);
 

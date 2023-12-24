@@ -477,3 +477,7 @@ $RECYCLE.BIN/
 *.lnk
 
 .idea
+
+# Tiled map edtiro file which only stores state for a local user. Lots of hard coded paths to
+# the users home directory, etc.
+*.tiled-session

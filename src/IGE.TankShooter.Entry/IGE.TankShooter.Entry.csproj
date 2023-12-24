@@ -46,6 +46,7 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.1.303" />
     <PackageReference Include="MonoGame.Extended.Tiled" Version="3.9.0-alpha0093" />
     <PackageReference Include="MonoGame.Extended.Content.Pipeline" Version="3.9.0-alpha0093" />
+    <PackageReference Include="QuikGraph" Version="2.5.0" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Physics" />
