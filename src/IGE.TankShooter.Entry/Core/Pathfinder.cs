@@ -264,7 +264,7 @@ public class Pathfinder
 
   public void Draw(SpriteBatch spriteBatch)
   {
-    if (_pathfindingGraph == null || !Debug.DrawDebugLines)
+    if (_pathfindingGraph == null || !Debug.DrawDebugLines.Pathfinding.Grid)
     {
       return;
     }
@@ -387,7 +387,6 @@ public class NavigationPath
     // figure out the closest. If we are exactly on top of a vertex, then
     // advance to the next one and return that.
 
-    // TODO: Expensive to create a list each time.
     foreach (var edge in _path)
     {
       if (edge.Target == currentVertex)
@@ -412,7 +411,7 @@ public class NavigationPath
 
   public void Draw(SpriteBatch spriteBatch)
   {
-    if (Debug.DrawDebugLines)
+    if (Debug.DrawDebugLines.Pathfinding.Grid && Debug.DrawDebugLines.Pathfinding.Results)
     { 
       foreach (var edge in ExaminedEdges) {
         var source = _pathfinder.PathfindingGridVertexToWorld(edge.Source);
@@ -427,7 +426,10 @@ public class NavigationPath
           0.1f
         );
       }
-      
+    }
+
+    if (Debug.DrawDebugLines.Pathfinding.Results)
+    { 
       if (Path != null)
       {
         foreach (var edge in Path) {

@@ -131,7 +131,7 @@ public class BackgroundMap
   {
     spriteBatch.Draw(_sprite, _transform);
 
-    if (Debug.DrawDebugLines)
+    if (Debug.DrawDebugLines.Collisions.Bounds)
     {
       foreach (var target in GetCollisionTargets())
       {

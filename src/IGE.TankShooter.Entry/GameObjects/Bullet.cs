@@ -36,7 +36,7 @@ public class Bullet : GameObject, ICollisionActor
   {
     Sprite.Draw(spriteBatch, this.Bounds.Position, Velocity.ToAngle(), SpriteScale);
 
-    if (Debug.DrawDebugLines)
+    if (Debug.DrawDebugLines.Collisions.Bounds)
     {
       spriteBatch.DrawCircle((CircleF)this.Bounds, 10, Color.Black, 0.1f);
       spriteBatch.DrawLine(this.initialPosition, this.initialPosition + this.Velocity, Color.Yellow, 0.1f);

@@ -141,9 +141,13 @@ public class Tank : GameObject, ICollisionActor
   {
     spriteBatch.Draw(Sprite, Transform);
 
-    if (Debug.DrawDebugLines)
+    if (Debug.DrawDebugLines.Collisions.Bounds)
     {
       spriteBatch.DrawCircle(this.bounds, 15, Color.Cyan, 0.1f);
+    }
+
+    if (Debug.DrawDebugLines.Movement)
+    {
       spriteBatch.DrawLine(CurrentPosition, CurrentPosition + velocity.TargetDirection * 10, Color.Cyan, 0.2f);
       spriteBatch.DrawLine(CurrentPosition, CurrentPosition + (velocity.Direction).NormalizedCopy() * 10, Color.LightCyan, 0.2f);
     }
@@ -308,7 +312,7 @@ class Turret : GameObject
   {
     spriteBatch.Draw(Sprite, Transform);
 
-    if (Debug.DrawDebugLines)
+    if (Debug.DrawDebugLines.Movement)
     {
       spriteBatch.DrawCircle(this.CurrentBarrelTipPosition, 0.5f, 8, Color.Cyan, 0.1f);
     }

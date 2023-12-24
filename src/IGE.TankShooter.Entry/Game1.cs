@@ -119,6 +119,8 @@ public class Game1 : Game
     if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
       Exit();
 
+    ToggleDebugInfo();
+
     MaybeFireBullet();
     MaybeSpawnEnemy(gameTime);
     
@@ -138,6 +140,36 @@ public class Game1 : Game
     CollisionComponent.Update(gameTime);
 
     base.Update(gameTime);
+  }
+
+  private void ToggleDebugInfo()
+  {
+    var kb = KeyboardExtended.GetState();
+    if (!kb.IsShiftDown())
+    {
+        return;
+    }
+
+    if (kb.WasKeyJustDown(Keys.M))
+    {
+      Debug.DrawDebugLines.Movement = !Debug.DrawDebugLines.Movement;
+    }
+
+    if (kb.WasKeyJustDown(Keys.G))
+    {
+      Debug.DrawDebugLines.Pathfinding.Grid = !Debug.DrawDebugLines.Pathfinding.Grid;
+    }
+
+    if (kb.WasKeyJustDown(Keys.P))
+    {
+      Debug.DrawDebugLines.Pathfinding.Results = !Debug.DrawDebugLines.Pathfinding.Results;
+    }
+    
+    if (kb.WasKeyJustDown(Keys.C))
+    {
+      Debug.DrawDebugLines.Collisions.Bounds = !Debug.DrawDebugLines.Collisions.Bounds;
+    }
+    
   }
 
   private void MaybeFireBullet()
