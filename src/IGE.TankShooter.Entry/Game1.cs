@@ -18,6 +18,11 @@ using MonoGame.Extended;
 using MonoGame.Extended.Collisions;
 using MonoGame.Extended.Sprites;
 using MonoGame.Extended.ViewportAdapters;
+using MonoGame.Extended.Particles;
+using MonoGame.Extended.TextureAtlases;
+using MonoGame.Extended.Particles.Profiles;
+using MonoGame.Extended.Particles.Modifiers;
+using MonoGame.Extended.Particles.Modifiers.Interpolators;
 
 public class Game1 : Game
 {
@@ -34,6 +39,8 @@ public class Game1 : Game
   private CollisionComponent CollisionComponent;
   private CameraOperator CameraOperator;
   private Pathfinder Pathfinder;
+  private ParticleEffect _enemyHitParticleEffect;
+  private Texture2D _enemyHitParticleTexture;
 
   private int EnemiesRemaining = 5;
   private int Points = 0;
@@ -105,11 +112,42 @@ public class Game1 : Game
       Content.Load<Texture2D>("enemy_person_c"),
       Content.Load<Texture2D>("enemy_person_d"),
     };
-    
+
+    this._enemyHitParticleTexture = new Texture2D(GraphicsDevice, 1, 1);
+    this._enemyHitParticleTexture.SetData(new[] { Color.White });
+    TextureRegion2D textureRegion = new TextureRegion2D(_enemyHitParticleTexture);
+    this._enemyHitParticleEffect = new ParticleEffect(autoTrigger: false)
+    {
+      Emitters = new List<ParticleEmitter>
+      {
+        new ParticleEmitter(textureRegion, 500, TimeSpan.FromSeconds(0.3), Profile.Spray(Vector2.One, 1f))
+        {
+          AutoTrigger = false,
+          Parameters = new ParticleReleaseParameters
+          {
+            Speed = new Range<float>(0f, 50f),
+            Quantity = 10,
+            Rotation = new Range<float>(-1f, 1f),
+            Scale = new Range<float>(0.5f, 0.75f),
+            Color = Color.DarkRed.ToHsl(),
+          },
+        }
+      }
+    };
+
     // Has to wait for the tank to "LoadContent" (rather than Initialize()) because the tanks transformation can only
     // be calculated once we've loaded its textures and decided how much we need to scale them.
     CameraOperator.CutTo(this.tank.CurrentPosition);
   }
+
+  protected override void UnloadContent()
+  {
+    base.UnloadContent();
+
+    _enemyHitParticleTexture.Dispose();
+    _enemyHitParticleEffect.Dispose();
+  }
+
 
   protected override void Update(GameTime gameTime)
   {
@@ -138,6 +176,8 @@ public class Game1 : Game
     }
     
     CollisionComponent.Update(gameTime);
+
+    _enemyHitParticleEffect.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 
     base.Update(gameTime);
   }
@@ -231,6 +271,8 @@ public class Game1 : Game
 
     // Always draw last so as to not obscure.
     this.DrawCursor();
+
+    this.spriteBatch.Draw(_enemyHitParticleEffect);
     this.spriteBatch.End();
 
     base.Draw(gameTime);
@@ -254,6 +296,13 @@ public class Game1 : Game
     // TODO: Queue explosion, damage, points, etc.
     Enemies.Remove(enemy);
     CollisionComponent.Remove(enemy);
+
+    _enemyHitParticleEffect.Position = enemy.Bounds.Position;
+    if (_enemyHitParticleEffect.Emitters[0].Profile is SprayProfile profile)
+    {
+      profile.Direction = bullet.Velocity;
+    }
+    _enemyHitParticleEffect.Trigger();
     
     RemoveBullet(bullet);
     Points += 1000;
