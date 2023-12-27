@@ -8,15 +8,15 @@ public class Debug
   public static class DrawDebugLines {
 
     public static class Collisions {
-      public static bool Bounds = true;
+      public static bool Bounds = false;
     }
 
     public static class Pathfinding {
       public static bool Grid = false;
-      public static bool Results = true;
+      public static bool Results = false;
     }
 
-    public static bool Movement = true;
+    public static bool Movement = false;
 
   }
 }
