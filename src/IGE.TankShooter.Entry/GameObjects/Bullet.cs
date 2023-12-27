@@ -15,7 +15,7 @@ public class Bullet : GameObject, ICollisionActor
 
   private readonly Game1 tankGame;
   public IShapeF Bounds { get; }
-  private Vector2 Velocity { get; }
+  public Vector2 Velocity { get; }
   private readonly Sprite Sprite;
   private readonly Vector2 SpriteScale;
   
