@@ -87,7 +87,7 @@ public class Game1 : Game
     var viewportAdapter = new BoxingViewportAdapter(Window, GraphicsDevice, 100, this.graphics.PreferredBackBufferHeight / ratio);
 
     this.Camera = new OrthographicCamera(viewportAdapter);
-    CameraOperator = new CameraOperator(this.tank, this.Camera);
+    CameraOperator = new CameraOperator(this.tank, this.Camera, Background.BoundingBox, this.graphics);
 
     this.Services.AddService(this.Camera);
 

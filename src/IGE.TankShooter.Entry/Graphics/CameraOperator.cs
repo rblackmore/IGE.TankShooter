@@ -7,6 +7,7 @@ using Core;
 using GameObjects;
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 using MonoGame.Extended;
 
@@ -14,10 +15,13 @@ using MonoGame.Extended;
 /// Helper class to control camera movements.
 /// Smoothly zooms in and out as the tank increases/decreases speed.
 /// Track the position of the tank by smoothly panning to its location.
+/// Stop panning when the edge of the world is reached.
 /// </summary>
 public class CameraOperator
 {
+  private GraphicsDeviceManager graphicsDevice;
   private OrthographicCamera camera;
+  private RectangleF boundingBox;
   private Tank tank;
 
   private MovementVelocity movement;
@@ -35,15 +39,19 @@ public class CameraOperator
   private const float MIN_ZOOM = 0.5f;
   private const float MAX_ZOOM = 1.1f;
 
-  public CameraOperator(Tank tank, OrthographicCamera camera)
+  public CameraOperator(Tank tank, OrthographicCamera camera, RectangleF boundingBox, GraphicsDeviceManager graphicsDevice)
   {
     this.tank = tank;
     this.camera = camera;
-    this.movement = new MovementVelocity(Vector2.Zero, 0f);
-    this.movement.MaxVelocity = Tank.MAX_SPEED;
-    this.movement.MinVelocity = Tank.MIN_SPEED;
-    this.movement.Acceleration = Tank.ACCELERATION / 8;
-    this.movement.Deceleration = Tank.DECELERATION / 8;
+    this.boundingBox = boundingBox;
+    this.graphicsDevice = graphicsDevice;
+    this.movement = new MovementVelocity(Vector2.Zero, 0f)
+    {
+      MaxVelocity = Tank.MAX_SPEED,
+      MinVelocity = Tank.MIN_SPEED,
+      Acceleration = Tank.ACCELERATION / 8,
+      Deceleration = Tank.DECELERATION / 8
+    };
   }
 
   public void CutTo(Vector2 position)
@@ -87,6 +95,49 @@ public class CameraOperator
     if (Math.Abs(zoomDelta) > BUFFER_ZOOM)
     {
       this.camera.Zoom += zoomDelta * gameTime.GetElapsedSeconds();
+    }
+
+    ClampToBoundingBox();
+  }
+
+  private void ClampToBoundingBox()
+  {
+    var topLeftWorld = this.camera.ScreenToWorld(Vector2.Zero);
+    var bottomRightScreen = new Vector2(this.graphicsDevice.GraphicsDevice.Viewport.Bounds.Right, this.graphicsDevice.GraphicsDevice.Viewport.Bounds.Bottom);
+    var bottomRightWorld = this.camera.ScreenToWorld(bottomRightScreen);
+
+    var adjustment = new Vector2(0f, 0f);
+    var needsAdjustment = false;
+    if (topLeftWorld.X < 0)
+    {
+      adjustment.X = -topLeftWorld.X;
+      Console.Write($"Left of world. Camera: {topLeftWorld.X}. ");
+      needsAdjustment = true;
+    }
+    else if (bottomRightWorld.X > boundingBox.Right)
+    {
+      adjustment.X = -(bottomRightWorld.X - boundingBox.Right);
+      Console.Write($"Right of world. World right: {boundingBox.Right}. Camera: {bottomRightWorld.X}. ");
+      needsAdjustment = true;
+    }
+    
+    if (topLeftWorld.Y < 0)
+    {
+      adjustment.Y = -topLeftWorld.Y;
+      Console.Write($"Above world. Camera: {topLeftWorld.Y}. ");
+      needsAdjustment = true;
+    }
+    else if (bottomRightWorld.Y > boundingBox.Bottom)
+    {
+      adjustment.Y = -(bottomRightWorld.Y - boundingBox.Bottom);
+      Console.Write($"Below world. World bottom: {boundingBox.Bottom}. Camera: {bottomRightWorld.Y}. ");
+      needsAdjustment = true;
+    }
+
+    if (needsAdjustment)
+    {
+      Console.WriteLine($"Adjusting: {adjustment}");
+      this.camera.Move(adjustment);
     }
   }
 }
