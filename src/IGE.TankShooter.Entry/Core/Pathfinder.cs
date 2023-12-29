@@ -79,7 +79,6 @@ public class Pathfinder
     if (!_pathfindingGraph.ContainsVertex(destVertex))
     {
       var closestVertex = ClosestVertex(destVertex);
-      Console.WriteLine($"No vertex at {destVertex}, will pathfind to the closest point {closestVertex} instead.");
       destVertex = closestVertex;
     }
 
@@ -126,7 +125,6 @@ public class Pathfinder
     {
       if (vertex == destVertex)
       {
-        Console.WriteLine($"Terminating pathfinding because path to vertex {destVertex} was found.");
         algo.Abort();
       }
     };
@@ -134,7 +132,6 @@ public class Pathfinder
     var predecessors = new VertexPredecessorRecorderObserver<int, Edge<int>>();
     using (predecessors.Attach(algo))
     {
-      Console.WriteLine($"Pathfinding from {targetVertex} to {destVertex}");
       algo.Compute(targetVertex);
     }
 
@@ -362,8 +359,6 @@ public class NavigationPath
       return true;
     }
 
-    Console.WriteLine(
-      $"Path from {_sourceVertex} to {_destVertex} does not match request path from {sourceVertex} to {destVertex}");
     return false;
   }
 
